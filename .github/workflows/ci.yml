@@ -74,7 +74,7 @@ jobs:
           version: master
 
       - name: Build release binary
-        run: zig build -Doptimize=ReleaseFast -Dtarget=${{ matrix.zig_target }}
+        run: zig build -Doptimize=ReleaseFast
 
       - name: Create artifact directory (Unix)
         if: runner.os != 'Windows'
