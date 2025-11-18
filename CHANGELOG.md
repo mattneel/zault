@@ -7,7 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Planned for v0.2.0
+- Share tokens with ML-KEM-768
+- Version history and diffs
+- Server implementation with REST API
+- Multi-device sync
+- File deletion command
+
 ## [0.1.0] - 2025-11-18
+
+**First alpha release!** Complete zero-knowledge storage with post-quantum cryptography.
+
+**Development time:** ~9 hours (from specification to release-ready)
+**Lines of code:** 1,826 (core + CLI)
+**Tests:** 22/22 passing
+**Platforms:** Linux (x86_64, ARM64), macOS (x86_64, ARM64), Windows (x86_64)
 
 ### Added
 
@@ -118,12 +132,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Get: ~10ms (retrieve + verify + decrypt 2 blocks)
 
 ### Known Limitations
-- Not yet audited by external security firm (planned Q1 2026)
-- Single-device only (no multi-device sync)
-- No file sharing yet (planned Phase 2.1 with ML-KEM)
-- No version history yet (planned Phase 2.2)
-- Metadata leakage (approximate file sizes visible)
-- No password recovery (key loss = permanent data loss)
+- ⚠️ **Not yet audited** by external security firm (planned Q1 2026)
+- ⚠️ **Single-device only** - No multi-device sync (planned v0.2.0)
+- ⚠️ **No file sharing** - Sharing with ML-KEM planned for v0.2.0
+- ⚠️ **No version history** - History tracking planned for v0.2.0
+- ⚠️ **No file deletion** - Delete command planned for v0.2.0
+- ℹ️ **Metadata leakage** - Approximate file sizes visible to server
+- ℹ️ **No password recovery** - Key loss = permanent data loss (by design)
+
+### Deferred to v0.2.0
+- BIP39 mnemonic backup for identities
+- zpub/zprv string encoding for public keys
+- `zault identity` subcommands (show, export, import)
+- `zault rm` command for deleting files
+- Full block chain validation for version history
 
 ---
 
