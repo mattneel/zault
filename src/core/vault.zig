@@ -7,6 +7,7 @@ const Identity = @import("identity.zig").Identity;
 const Block = @import("block.zig").Block;
 const BlockStore = @import("store.zig").BlockStore;
 const BlockHash = @import("store.zig").BlockHash;
+const FileMetadata = @import("metadata.zig").FileMetadata;
 const crypto = @import("crypto.zig");
 const encryptData = @import("block.zig").encryptData;
 const decryptData = @import("block.zig").decryptData;
@@ -71,61 +72,163 @@ pub const Vault = struct {
         return master_key;
     }
 
-    /// Add a file to the vault (simplified - stores raw data for now)
+    /// Add a file to the vault with full encryption
     pub fn addFile(self: *Vault, file_path: []const u8) !BlockHash {
-        // Read file
-        const data = try std.fs.cwd().readFileAlloc(
+        // 1. Read file
+        const plaintext = try std.fs.cwd().readFileAlloc(
             file_path,
             self.allocator,
             @enumFromInt(100 * 1024 * 1024), // 100MB max
         );
-        defer self.allocator.free(data);
+        defer self.allocator.free(plaintext);
 
-        // For now, store data as-is (no encryption yet - encryption key management needed)
-        // In Phase 1.3 we'll add metadata blocks with encryption keys
+        // 2. Generate per-file encryption key and nonce
+        var content_key: [32]u8 = undefined;
+        crypto.random.bytes(&content_key);
 
-        // Generate nonce (even though we're not encrypting yet, we need it for the block structure)
-        var nonce: [12]u8 = undefined;
-        crypto.random.bytes(&nonce);
+        var content_nonce: [12]u8 = undefined;
+        crypto.random.bytes(&content_nonce);
 
-        // Create block
-        var block = Block{
+        // 3. Encrypt file data
+        const ciphertext = try encryptData(
+            plaintext,
+            content_key,
+            content_nonce,
+            self.allocator,
+        );
+        defer self.allocator.free(ciphertext);
+
+        // 4. Create content block
+        var content_block = Block{
             .version = 0x01,
             .block_type = .content,
-            .timestamp = 0, // TODO: Use actual timestamp
+            .timestamp = 0,
             .author = self.identity.public_key,
-            .data = data,
-            .nonce = nonce,
+            .data = ciphertext,
+            .nonce = content_nonce,
             .signature = undefined,
             .prev_hash = [_]u8{0} ** 32,
             .hash = undefined,
         };
 
-        // Sign block
-        try block.sign(&self.identity.secret_key, self.allocator);
+        // 5. Sign content block
+        try content_block.sign(&self.identity.secret_key, self.allocator);
+        content_block.hash = content_block.computeHash();
 
-        // Compute hash
-        block.hash = block.computeHash();
+        // 6. Store content block
+        try self.store.put(content_block.hash, &content_block);
 
-        // Store block
-        try self.store.put(block.hash, &block);
+        // 7. Create metadata
+        const basename = std.fs.path.basename(file_path);
+        const mime_type = detectMimeType(file_path);
 
-        return block.hash;
+        const file_metadata = FileMetadata{
+            .version = 0x01,
+            .filename = basename,
+            .size = plaintext.len,
+            .mime_type = mime_type,
+            .created = 0,
+            .modified = 0,
+            .content_hash = content_block.hash,
+            .content_key = content_key,
+            .content_nonce = content_nonce,
+        };
+
+        // 8. Serialize metadata
+        const metadata_bytes = try file_metadata.serialize(self.allocator);
+        defer self.allocator.free(metadata_bytes);
+
+        // 9. Encrypt metadata with vault master key
+        var metadata_nonce: [12]u8 = undefined;
+        crypto.random.bytes(&metadata_nonce);
+
+        const encrypted_metadata = try encryptData(
+            metadata_bytes,
+            self.master_key,
+            metadata_nonce,
+            self.allocator,
+        );
+        defer self.allocator.free(encrypted_metadata);
+
+        // 10. Create metadata block
+        var metadata_block = Block{
+            .version = 0x01,
+            .block_type = .metadata,
+            .timestamp = 0,
+            .author = self.identity.public_key,
+            .data = encrypted_metadata,
+            .nonce = metadata_nonce,
+            .signature = undefined,
+            .prev_hash = content_block.hash, // Chain to content
+            .hash = undefined,
+        };
+
+        // 11. Sign metadata block
+        try metadata_block.sign(&self.identity.secret_key, self.allocator);
+        metadata_block.hash = metadata_block.computeHash();
+
+        // 12. Store metadata block
+        try self.store.put(metadata_block.hash, &metadata_block);
+
+        // Return metadata block hash (user stores this)
+        return metadata_block.hash;
     }
 
-    /// Get a file from the vault
+    /// Simple MIME type detection based on file extension
+    fn detectMimeType(file_path: []const u8) []const u8 {
+        if (std.mem.endsWith(u8, file_path, ".txt")) return "text/plain";
+        if (std.mem.endsWith(u8, file_path, ".md")) return "text/markdown";
+        if (std.mem.endsWith(u8, file_path, ".pdf")) return "application/pdf";
+        if (std.mem.endsWith(u8, file_path, ".png")) return "image/png";
+        if (std.mem.endsWith(u8, file_path, ".jpg")) return "image/jpeg";
+        if (std.mem.endsWith(u8, file_path, ".jpeg")) return "image/jpeg";
+        if (std.mem.endsWith(u8, file_path, ".zip")) return "application/zip";
+        if (std.mem.endsWith(u8, file_path, ".json")) return "application/json";
+        return "application/octet-stream";
+    }
+
+    /// Get a file from the vault with full decryption
     pub fn getFile(self: *Vault, hash: BlockHash, output_path: []const u8) !void {
-        // Retrieve block
-        const block = try self.store.get(hash);
-        defer self.allocator.free(block.data);
+        // 1. Retrieve metadata block
+        const metadata_block = try self.store.get(hash);
+        defer self.allocator.free(metadata_block.data);
 
-        // Verify signature
-        try block.verify(self.allocator);
+        // 2. Verify metadata signature
+        try metadata_block.verify(self.allocator);
 
-        // Write to output file (data is not encrypted in this version)
+        // 3. Decrypt metadata with vault master key
+        const metadata_bytes = try decryptData(
+            metadata_block.data,
+            self.master_key,
+            metadata_block.nonce,
+            self.allocator,
+        );
+        defer self.allocator.free(metadata_bytes);
+
+        // 4. Parse metadata
+        var file_metadata = try FileMetadata.deserialize(metadata_bytes, self.allocator);
+        defer file_metadata.deinit(self.allocator);
+
+        // 5. Retrieve content block
+        const content_block = try self.store.get(file_metadata.content_hash);
+        defer self.allocator.free(content_block.data);
+
+        // 6. Verify content signature
+        try content_block.verify(self.allocator);
+
+        // 7. Decrypt content with per-file key
+        const plaintext = try decryptData(
+            content_block.data,
+            file_metadata.content_key,
+            file_metadata.content_nonce,
+            self.allocator,
+        );
+        defer self.allocator.free(plaintext);
+
+        // 8. Write plaintext to output file
         const file = try std.fs.cwd().createFile(output_path, .{});
         defer file.close();
-        try file.writeAll(block.data);
+        try file.writeAll(plaintext);
     }
 
     /// List all blocks in the vault
