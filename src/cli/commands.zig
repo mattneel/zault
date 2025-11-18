@@ -14,6 +14,9 @@ const SubCommand = enum {
     get,
     list,
     verify,
+    share,
+    receive,
+    pubkey,
     help,
     version,
 };
@@ -81,6 +84,9 @@ pub fn run(allocator: std.mem.Allocator) !void {
         .get => try cmdGet(allocator, &iter, vault_path),
         .list => try cmdList(allocator, &iter, vault_path),
         .verify => try cmdVerify(allocator, &iter, vault_path),
+        .share => try cmdShare(allocator, &iter, vault_path),
+        .receive => try cmdReceive(allocator, &iter, vault_path),
+        .pubkey => try cmdPubkey(allocator, &iter, vault_path),
         .help => try printMainHelp(),
         .version => try printVersion(),
     }
@@ -104,6 +110,8 @@ fn printMainHelp() !void {
         \\    get <HASH> [OUT]    Retrieve file by hash (decrypted)
         \\    list                 List all files in vault
         \\    verify <HASH>        Verify block signature
+        \\    share <HASH>         Create share token for file (ML-KEM-768)
+        \\    receive <TOKEN>      Redeem share token
         \\    help                 Display this help
         \\    version              Display version information
         \\
@@ -424,3 +432,194 @@ fn cmdVerify(allocator: std.mem.Allocator, iter: *std.process.ArgIterator, vault
 
     std.debug.print("✓ Signature valid (ML-DSA-65)\n", .{});
 }
+
+// ============================================================================
+// Subcommand: share
+// ============================================================================
+
+const share_params = clap.parseParamsComptime(
+    \\-h, --help              Display help for share command.
+    \\    --to <STR>          Recipient's ML-KEM public key (hex).
+    \\    --expires <i64>     Expiration timestamp (Unix time).
+    \\<HASH>
+    \\
+);
+
+const share_parsers = .{
+    .HASH = clap.parsers.string,
+    .STR = clap.parsers.string,
+    .i64 = clap.parsers.int(i64, 10),
+};
+
+fn cmdShare(allocator: std.mem.Allocator, iter: *std.process.ArgIterator, vault_path: []const u8) !void {
+    var diag = clap.Diagnostic{};
+    var res = clap.parseEx(clap.Help, &share_params, share_parsers, iter, .{
+        .diagnostic = &diag,
+        .allocator = allocator,
+    }) catch |err| {
+        // Print error to stderr
+        std.debug.print("Error: {}\n", .{err});
+        return err;
+    };
+    defer res.deinit();
+
+    if (res.args.help != 0) {
+        std.debug.print("Create a share token for a file\n\n", .{});
+        std.debug.print("USAGE:\n", .{});
+        std.debug.print("    zault share <HASH> --to <PUBKEY> --expires <TIMESTAMP>\n\n", .{});
+        std.debug.print("OPTIONS:\n", .{});
+        std.debug.print("    --to <HEX>        Recipient's ML-KEM-768 public key (hex, 1184 bytes)\n", .{});
+        std.debug.print("    --expires <TIME>  Expiration Unix timestamp\n", .{});
+        std.debug.print("\nEXAMPLE:\n", .{});
+        std.debug.print("    zault share 8578287e... --to <recipient_pubkey> --expires 1700000000\n", .{});
+        return;
+    }
+
+    const hash_str = res.positionals[0] orelse {
+        std.debug.print("Error: No file hash specified\n\n", .{});
+        std.debug.print("USAGE: zault share <HASH> --to <PUBKEY> --expires <TIMESTAMP>\n", .{});
+        return error.MissingArgument;
+    };
+
+    const recipient_pubkey_hex = res.args.to orelse {
+        std.debug.print("Error: No recipient specified\n\n", .{});
+        std.debug.print("Use --to <PUBKEY> to specify recipient's ML-KEM public key\n", .{});
+        return error.MissingRecipient;
+    };
+
+    const expires_at = res.args.expires orelse {
+        std.debug.print("Error: No expiration specified\n\n", .{});
+        std.debug.print("Use --expires <TIMESTAMP> to set expiration\n", .{});
+        return error.MissingExpiration;
+    };
+
+    // Parse file hash
+    var file_hash: BlockHash = undefined;
+    _ = try std.fmt.hexToBytes(&file_hash, hash_str);
+
+    // Parse recipient ML-KEM public key (1184 bytes = 2368 hex chars)
+    var recipient_pubkey: [1184]u8 = undefined;
+    _ = try std.fmt.hexToBytes(&recipient_pubkey, recipient_pubkey_hex);
+
+    var vault = try Vault.init(allocator, vault_path);
+    defer vault.deinit();
+
+    std.debug.print("Creating share token...\n", .{});
+
+    const share_token = try vault.createShare(file_hash, &recipient_pubkey, expires_at, allocator);
+    defer allocator.free(share_token);
+
+    std.debug.print("✓ Share token created (ML-KEM-768)\n", .{});
+    std.debug.print("Token (hex): ", .{});
+
+    // Print token as hex for easy copy/paste
+    for (share_token) |byte| {
+        std.debug.print("{x:0>2}", .{byte});
+    }
+    std.debug.print("\n", .{});
+    std.debug.print("\nRecipient can redeem with:\n", .{});
+    std.debug.print("    zault receive <TOKEN>\n", .{});
+}
+
+// ============================================================================
+// Subcommand: receive
+// ============================================================================
+
+const receive_params = clap.parseParamsComptime(
+    \\-h, --help    Display help for receive command.
+    \\<TOKEN>
+    \\
+);
+
+const receive_parsers = .{
+    .TOKEN = clap.parsers.string,
+};
+
+fn cmdReceive(allocator: std.mem.Allocator, iter: *std.process.ArgIterator, vault_path: []const u8) !void {
+    var diag = clap.Diagnostic{};
+    var res = clap.parseEx(clap.Help, &receive_params, receive_parsers, iter, .{
+        .diagnostic = &diag,
+        .allocator = allocator,
+    }) catch |err| {
+        // Print error to stderr
+        std.debug.print("Error: {}\n", .{err});
+        return err;
+    };
+    defer res.deinit();
+
+    if (res.args.help != 0) {
+        std.debug.print("Redeem a share token\n\n", .{});
+        std.debug.print("USAGE:\n", .{});
+        std.debug.print("    zault receive <TOKEN>\n\n", .{});
+        std.debug.print("Decrypts the share token and grants access to the shared file.\n", .{});
+        return;
+    }
+
+    const token_hex = res.positionals[0] orelse {
+        std.debug.print("Error: No token specified\n\n", .{});
+        std.debug.print("USAGE: zault receive <TOKEN>\n", .{});
+        return error.MissingArgument;
+    };
+
+    // Parse token from hex
+    const token_bytes = try allocator.alloc(u8, token_hex.len / 2);
+    defer allocator.free(token_bytes);
+    _ = try std.fmt.hexToBytes(token_bytes, token_hex);
+
+    var vault = try Vault.init(allocator, vault_path);
+    defer vault.deinit();
+
+    std.debug.print("Redeeming share token...\n", .{});
+
+    const file_hash = try vault.redeemShare(token_bytes, allocator);
+
+    std.debug.print("✓ Share token redeemed (ML-KEM-768)\n", .{});
+    std.debug.print("File hash: ", .{});
+    const hex = std.fmt.bytesToHex(&file_hash, .lower);
+    std.debug.print("{s}\n", .{hex});
+    std.debug.print("\nRetrieve file with:\n", .{});
+    std.debug.print("    zault get {s} output.bin\n", .{hex});
+}
+
+// ============================================================================
+// Subcommand: pubkey
+// ============================================================================
+
+const pubkey_params = clap.parseParamsComptime(
+    \\-h, --help    Display help for pubkey command.
+    \\
+);
+
+fn cmdPubkey(allocator: std.mem.Allocator, iter: *std.process.ArgIterator, vault_path: []const u8) !void {
+    var diag = clap.Diagnostic{};
+    var res = clap.parseEx(clap.Help, &pubkey_params, clap.parsers.default, iter, .{
+        .diagnostic = &diag,
+        .allocator = allocator,
+    }) catch |err| {
+        std.debug.print("Error: {}\n", .{err});
+        return err;
+    };
+    defer res.deinit();
+
+    if (res.args.help != 0) {
+        std.debug.print("Display your ML-KEM public key for sharing\n\n", .{});
+        std.debug.print("USAGE:\n", .{});
+        std.debug.print("    zault pubkey\n\n", .{});
+        std.debug.print("Shows your ML-KEM-768 public key that others can use to share files with you.\n", .{});
+        return;
+    }
+
+    var vault = try Vault.init(allocator, vault_path);
+    defer vault.deinit();
+
+    std.debug.print("Your ML-KEM-768 public key (for receiving shares):\n", .{});
+
+    // Print as hex
+    for (vault.identity.kem_public_key) |byte| {
+        std.debug.print("{x:0>2}", .{byte});
+    }
+    std.debug.print("\n", .{});
+    std.debug.print("\nOthers can share files with you using:\n", .{});
+    std.debug.print("    zault share <HASH> --to <YOUR_PUBKEY> --expires <TIME>\n", .{});
+}
+
