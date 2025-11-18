@@ -21,10 +21,12 @@ pub const BlockHash = store.BlockHash;
 pub const Vault = vault.Vault;
 pub const FileMetadata = metadata.FileMetadata;
 
-test "core modules are accessible" {
+test "core modules are accessible (also doubles as a test aggregator)" {
     // Verify all modules are accessible
     _ = crypto;
     _ = identity;
     _ = block;
     _ = store;
+    _ = vault;
+    _ = metadata;
 }
