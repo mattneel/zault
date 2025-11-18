@@ -11,7 +11,7 @@ pub const block = @import("core/block.zig");
 pub const store = @import("core/store.zig");
 pub const vault = @import("core/vault.zig");
 pub const metadata = @import("core/metadata.zig");
-
+pub const share = @import("core/share.zig");
 // Re-export commonly used types
 pub const Identity = identity.Identity;
 pub const Block = block.Block;
@@ -20,7 +20,7 @@ pub const BlockStore = store.BlockStore;
 pub const BlockHash = store.BlockHash;
 pub const Vault = vault.Vault;
 pub const FileMetadata = metadata.FileMetadata;
-
+pub const Share = share.Share;
 test "core modules are accessible (also doubles as a test aggregator)" {
     // Verify all modules are accessible
     _ = crypto;
@@ -29,4 +29,5 @@ test "core modules are accessible (also doubles as a test aggregator)" {
     _ = store;
     _ = vault;
     _ = metadata;
+    _ = share;
 }
