@@ -270,6 +270,54 @@ pub const Vault = struct {
         return list;
     }
 
+    /// File information for listing
+    pub const FileInfo = struct {
+        hash: BlockHash,
+        filename: []const u8,
+        size: u64,
+        mime_type: []const u8,
+        created: i64,
+    };
+
+    /// List all files in the vault with metadata
+    pub fn listFiles(self: *Vault) !std.ArrayList(FileInfo) {
+        var list = std.ArrayList(FileInfo){};
+
+        var blocks = try self.listBlocks();
+        defer blocks.deinit(self.allocator);
+
+        for (blocks.items) |hash| {
+            // Try to load as metadata block
+            const block = self.store.get(hash) catch continue;
+            defer self.allocator.free(block.data);
+
+            // Skip if not metadata
+            if (block.block_type != .metadata) continue;
+
+            // Decrypt and parse metadata
+            const metadata_bytes = decryptData(
+                block.data,
+                self.master_key,
+                block.nonce,
+                self.allocator,
+            ) catch continue;
+            defer self.allocator.free(metadata_bytes);
+
+            var file_metadata = FileMetadata.deserialize(metadata_bytes, self.allocator) catch continue;
+            // Don't defer deinit - we're transferring ownership to FileInfo
+
+            try list.append(self.allocator, FileInfo{
+                .hash = hash,
+                .filename = file_metadata.filename,
+                .size = file_metadata.size,
+                .mime_type = file_metadata.mime_type,
+                .created = file_metadata.created,
+            });
+        }
+
+        return list;
+    }
+
     /// Verify a block's signature
     pub fn verifyBlock(self: *Vault, hash: BlockHash) !void {
         const block = try self.store.get(hash);

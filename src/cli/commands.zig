@@ -139,14 +139,34 @@ fn cmdList(allocator: std.mem.Allocator, args: anytype) !void {
     var vault = try Vault.init(allocator, vault_path);
     defer vault.deinit();
 
-    var blocks = try vault.listBlocks();
-    defer blocks.deinit(allocator);
+    var files = try vault.listFiles();
+    defer {
+        for (files.items) |*file| {
+            allocator.free(file.filename);
+            allocator.free(file.mime_type);
+        }
+        files.deinit(allocator);
+    }
 
-    std.debug.print("Blocks in vault: {d}\n\n", .{blocks.items.len});
+    std.debug.print("Files in vault: {d}\n\n", .{files.items.len});
 
-    for (blocks.items) |hash| {
-        const hex = std.fmt.bytesToHex(&hash, .lower);
-        std.debug.print("{s}\n", .{hex});
+    if (files.items.len == 0) {
+        std.debug.print("(empty)\n", .{});
+        return;
+    }
+
+    // Print header
+    std.debug.print("{s:<40} {s:>10} {s:<20} {s}\n", .{ "Filename", "Size", "Type", "Hash" });
+    std.debug.print("{s}\n", .{"-" ** 100});
+
+    for (files.items) |file| {
+        const hex = std.fmt.bytesToHex(&file.hash, .lower);
+        std.debug.print("{s:<40} {d:>10} {s:<20} {s}\n", .{
+            file.filename,
+            file.size,
+            file.mime_type,
+            hex[0..16], // First 16 chars of hash
+        });
     }
 }
 
