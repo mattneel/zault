@@ -1,0 +1,69 @@
+/* Shiki syntax highlighting styles for mdBook */
+
+/* Light theme (default) */
+html.light,
+html.rust {
+    --code-background-color: #ffffff;
+    --shiki-theme: github-light;
+}
+
+/* Dark themes */
+html.coal,
+html.navy,
+html.ayu {
+    --code-background-color: #0d1117;
+    --shiki-theme: github-dark;
+}
+
+/* Code block styling */
+code {
+    background-color: var(--code-background-color);
+}
+
+pre code {
+    display: block;
+    padding: 1em;
+    overflow-x: auto;
+}
+
+/* Light theme shiki styles */
+html.light .shiki,
+html.rust .shiki,
+html.light .shiki span,
+html.rust .shiki span {
+    color: var(--shiki-light);
+    background-color: var(--code-background-color);
+    font-style: var(--shiki-light-font-style);
+    font-weight: var(--shiki-light-font-weight);
+    text-decoration: var(--shiki-light-text-decoration);
+}
+
+/* Dark theme shiki styles */
+html.coal .shiki,
+html.navy .shiki,
+html.ayu .shiki,
+html.coal .shiki span,
+html.navy .shiki span,
+html.ayu .shiki span {
+    color: var(--shiki-dark);
+    background-color: var(--code-background-color);
+    font-style: var(--shiki-dark-font-style);
+    font-weight: var(--shiki-dark-font-weight);
+    text-decoration: var(--shiki-dark-text-decoration);
+}
+
+/* Preserve mdBook code block styling */
+.shiki {
+    margin: 0.5em 0;
+    border-radius: 3px;
+}
+
+/* Fix line numbers if used */
+.shiki .line {
+    line-height: 1.5;
+}
+
+/* Ensure proper spacing */
+.shiki code {
+    padding: 0;
+}

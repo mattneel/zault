@@ -1,0 +1,25 @@
+[book]
+title = "Zault Documentation"
+authors = ["Zault Contributors"]
+language = "en"
+multilingual = false
+src = "src"
+
+[build]
+build-dir = "book"
+create-missing = false
+
+[output.html]
+default-theme = "rust"
+preferred-dark-theme = "navy"
+git-repository-url = "https://github.com/yourusername/zault"
+edit-url-template = "https://github.com/yourusername/zault/edit/master/book/{path}"
+additional-css = ["theme/shiki.css"]
+additional-js = ["theme/highlight.js"]
+
+[output.html.fold]
+enable = true
+level = 1
+
+[output.html.playground]
+editable = false
