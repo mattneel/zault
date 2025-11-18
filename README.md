@@ -34,6 +34,7 @@ $ zault get 8578287e... output.txt
 Your Dropbox data is being **harvested right now** for future quantum decryption. Zault makes that **mathematically impossible**.
 
 Zault is a **quantum-resistant, zero-knowledge storage system** where:
+
 - The server **cannot decrypt** your files (even if it tries)
 - The server **cannot read** your filenames (fully encrypted)
 - Every operation is **cryptographically signed** (verifiable)
@@ -51,15 +52,15 @@ Nation-states are **capturing encrypted traffic today** to decrypt when quantum 
 
 ### Current "Secure Storage" is Security Theater
 
-| Provider | Can Read Your Files | Post-Quantum Crypto | Zero-Knowledge | Open Source |
-|----------|-------------------|---------------------|----------------|-------------|
-| Dropbox | ✅ Yes | ❌ No | ❌ No | ❌ No |
-| Google Drive | ✅ Yes | ❌ No | ❌ No | ❌ No |
-| Box | ✅ Yes | ❌ No | ❌ No | ❌ No |
-| iCloud | ✅ Yes | ❌ No | ❌ No | ❌ No |
-| Tresorit | 🤷 "Trust us" | ❌ No | ⚠️ Claims | ❌ No |
-| Nextcloud | ⚠️ Sometimes | ❌ No | ⚠️ Config | ✅ Yes |
-| **Zault** | **❌ Impossible** | **✅ Yes** | **✅ Yes** | **✅ Yes** |
+| Provider     | Can Read Your Files | Post-Quantum Crypto | Zero-Knowledge | Open Source |
+| ------------ | ------------------- | ------------------- | -------------- | ----------- |
+| Dropbox      | ✅ Yes              | ❌ No               | ❌ No          | ❌ No       |
+| Google Drive | ✅ Yes              | ❌ No               | ❌ No          | ❌ No       |
+| Box          | ✅ Yes              | ❌ No               | ❌ No          | ❌ No       |
+| iCloud       | ✅ Yes              | ❌ No               | ❌ No          | ❌ No       |
+| Tresorit     | 🤷 "Trust us"       | ❌ No               | ⚠️ Claims      | ❌ No       |
+| Nextcloud    | ⚠️ Sometimes        | ❌ No               | ⚠️ Config      | ✅ Yes      |
+| **Zault**    | **❌ Impossible**   | **✅ Yes**          | **✅ Yes**     | **✅ Yes**  |
 
 ### Zault's Guarantees
 
@@ -83,6 +84,7 @@ Nation-states are **capturing encrypted traffic today** to decrypt when quantum 
 ### 🎯 Zero-Knowledge Architecture
 
 **Server sees:**
+
 ```json
 {
   "block_id": "8578287ea915b760...",
@@ -92,6 +94,7 @@ Nation-states are **capturing encrypted traffic today** to decrypt when quantum 
 ```
 
 **Server CANNOT see:**
+
 - ❌ Filenames (encrypted)
 - ❌ File contents (encrypted)
 - ❌ File sizes (padded + encrypted)
@@ -136,7 +139,7 @@ curl -O https://ziglang.org/download/...
 
 ```bash
 # Clone repository
-git clone https://github.com/yourusername/zault
+git clone https://github.com/mattneel/zault
 cd zault
 
 # Build
@@ -288,18 +291,19 @@ Return plaintext file ✓
 
 ### Cryptographic Primitives
 
-| Primitive | Algorithm | Security Level | Purpose |
-|-----------|-----------|----------------|---------|
-| Signatures | ML-DSA-65 | ~192-bit (PQ) | Authentication |
-| Encryption | ChaCha20-Poly1305 | 256-bit | Confidentiality |
-| Key Derivation | HKDF-SHA3-256 | 256-bit | Master key |
-| Hashing | SHA3-256 | 256-bit | Content addressing |
+| Primitive      | Algorithm         | Security Level | Purpose            |
+| -------------- | ----------------- | -------------- | ------------------ |
+| Signatures     | ML-DSA-65         | ~192-bit (PQ)  | Authentication     |
+| Encryption     | ChaCha20-Poly1305 | 256-bit        | Confidentiality    |
+| Key Derivation | HKDF-SHA3-256     | 256-bit        | Master key         |
+| Hashing        | SHA3-256          | 256-bit        | Content addressing |
 
 **PQ = Post-Quantum Resistant**
 
 ### Threat Model
 
 **Protected Against:**
+
 - ✅ Malicious storage providers (cannot decrypt)
 - ✅ Network eavesdropping (end-to-end encrypted)
 - ✅ Quantum adversaries (ML-DSA is quantum-resistant)
@@ -307,6 +311,7 @@ Return plaintext file ✓
 - ✅ Tampering (signatures detect changes)
 
 **Not Protected Against:**
+
 - ❌ Malware on your device (has access to keys)
 - ❌ Physical attacks on your device
 - ❌ Social engineering (giving away your keys)
@@ -315,20 +320,24 @@ Return plaintext file ✓
 ### Security Properties
 
 **Confidentiality:** ✅
+
 - Content encrypted with unique keys per file
 - Metadata encrypted with vault master key
 - No plaintext visible in storage
 
 **Integrity:** ✅
+
 - All blocks signed with ML-DSA-65
 - Content-addressed (SHA3-256 hashes)
 - Tampering immediately detected
 
 **Authenticity:** ✅
+
 - Digital signatures prove authorship
 - Cannot forge blocks without private key
 
 **Forward Secrecy:** ✅
+
 - Compromise of one file key doesn't affect others
 
 ---
@@ -338,7 +347,7 @@ Return plaintext file ✓
 ### Build from Source
 
 ```bash
-git clone https://github.com/yourusername/zault
+git clone https://github.com/mattneel/zault
 cd zault
 zig build
 ```
@@ -432,12 +441,14 @@ zault/
 We welcome contributions! Zault is built with:
 
 **Compiler-Driven Development:**
+
 - Write code, let Zig compiler teach you the correct API
 - Test immediately after every change
 - Fix one error at a time
 - See KICKSTART.md for methodology
 
 **Areas We Need Help:**
+
 - 🔐 Cryptography review
 - 📱 Mobile clients (iOS/Android)
 - 🌐 Browser extension
@@ -469,21 +480,25 @@ We welcome contributions! Zault is built with:
 ### Encryption Layers
 
 **Layer 1: Content Encryption**
+
 - Each file encrypted with unique random key
 - Algorithm: ChaCha20-Poly1305 (256-bit)
 - Authenticated encryption prevents tampering
 
 **Layer 2: Metadata Encryption**
+
 - Filenames, sizes, types encrypted
 - Algorithm: ChaCha20-Poly1305 (256-bit)
 - Key: Derived from identity via HKDF
 
 **Layer 3: Digital Signatures**
+
 - All blocks signed with ML-DSA-65
 - Post-quantum secure signatures
 - Tamper detection
 
 **Layer 4: Content Addressing**
+
 - Blocks identified by SHA3-256 hash
 - Integrity guaranteed
 
@@ -509,14 +524,14 @@ We welcome contributions! Zault is built with:
 
 **Measured on modern hardware:**
 
-| Operation | Time | Notes |
-|-----------|------|-------|
-| `zault init` | ~50ms | ML-DSA keypair generation |
-| `zault add` (1KB) | ~8ms | Encrypt + sign + 2 blocks |
-| `zault add` (1MB) | ~15ms | Mostly I/O |
-| `zault list` (100 files) | ~25ms | Decrypt metadata |
-| `zault verify` | ~2ms | ML-DSA verification |
-| `zault get` | ~10ms | 2 blocks + decrypt |
+| Operation                | Time  | Notes                     |
+| ------------------------ | ----- | ------------------------- |
+| `zault init`             | ~50ms | ML-DSA keypair generation |
+| `zault add` (1KB)        | ~8ms  | Encrypt + sign + 2 blocks |
+| `zault add` (1MB)        | ~15ms | Mostly I/O                |
+| `zault list` (100 files) | ~25ms | Decrypt metadata          |
+| `zault verify`           | ~2ms  | ML-DSA verification       |
+| `zault get`              | ~10ms | 2 blocks + decrypt        |
 
 **Fast enough for real-world use!**
 
@@ -592,7 +607,7 @@ grep -r "hunter2" ~/.zault/
 - **Protocol Spec:** [protocol-specification.md](book/src/protocol-specification.md)
 - **Roadmap:** [ROADMAP.md](ROADMAP.md)
 - **Status:** [STATUS.md](STATUS.md)
-- **Issues:** [GitHub Issues](https://github.com/yourusername/zault/issues)
+- **Issues:** [GitHub Issues](https://github.com/mattneel/zault/issues)
 
 ---
 
@@ -626,16 +641,19 @@ Use at your own risk. We recommend waiting for security audits before production
 ## 🚀 What's Next?
 
 **v0.1.0 Release (This Week):**
+
 - Complete documentation
 - CI/CD pipeline
 - Cross-platform testing
 
 **v0.2.0 (Next Month):**
+
 - Share tokens (ML-KEM-768)
 - Version history
 - Server implementation
 
 **v1.0.0 (Future):**
+
 - Security audit
 - Mobile apps
 - Production ready
@@ -644,7 +662,7 @@ Use at your own risk. We recommend waiting for security audits before production
 
 **Built with ⚡ Zig • Protected by 🔒 post-quantum crypto • Verified by ✍️ ML-DSA-65**
 
-*"Vault zero. Trust zero. Quantum zero."*
+_"Vault zero. Trust zero. Quantum zero."_
 
 ---
 
@@ -652,18 +670,20 @@ Use at your own risk. We recommend waiting for security audits before production
 
 ![Zault Demo](demo.gif)
 
-*(Coming soon - showing init, add, list, get, verify)*
+_(Coming soon - showing init, add, list, get, verify)_
 
 ---
 
 ## 📞 Support
 
 **Questions?**
+
 - Read the docs: `book/src/`
 - Check examples: `demo.sh`
 - Open an issue: GitHub Issues
 
 **Security concerns?**
+
 - See [SECURITY.md](SECURITY.md)
 - Email: security@zault.io (coming soon)
 

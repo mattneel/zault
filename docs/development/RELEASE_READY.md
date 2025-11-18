@@ -15,6 +15,7 @@ Zault is **complete and ready for v0.1.0 alpha release**. All core functionality
 ## ✅ What's Complete
 
 ### Core Functionality (100%)
+
 - ✅ Post-quantum cryptography (ML-DSA-65, ChaCha20-Poly1305)
 - ✅ Zero-knowledge encryption (two-block system)
 - ✅ Content-addressed storage
@@ -23,6 +24,7 @@ Zault is **complete and ready for v0.1.0 alpha release**. All core functionality
 - ✅ File metadata encryption
 
 ### CLI (100%)
+
 - ✅ `zault init` - Create vault
 - ✅ `zault add` - Encrypt and upload
 - ✅ `zault get` - Download and decrypt
@@ -30,12 +32,14 @@ Zault is **complete and ready for v0.1.0 alpha release**. All core functionality
 - ✅ `zault verify` - Verify signatures
 
 ### Testing (100%)
+
 - ✅ 22/22 tests passing
 - ✅ All modules covered
 - ✅ Integration tests
 - ✅ End-to-end tested
 
 ### Documentation (100%)
+
 - ✅ **README.md** - Project overview with comparison table
 - ✅ **demo.gif** - Animated demonstration
 - ✅ **Getting Started Guide** - Installation and first vault
@@ -46,6 +50,7 @@ Zault is **complete and ready for v0.1.0 alpha release**. All core functionality
 - ✅ **Protocol Specification** - Technical details
 
 ### Infrastructure (100%)
+
 - ✅ **GitHub Actions CI** - Multi-platform testing
 - ✅ **Build System** - Zig build.zig
 - ✅ **Demo Scripts** - Automated demonstrations
@@ -94,13 +99,13 @@ Development Time:
 
 ### Cryptographic Algorithms ✅
 
-| Algorithm | Standard | Purpose | Status |
-|-----------|----------|---------|--------|
-| ML-DSA-65 | NIST FIPS 204 | Signatures | ✅ Implemented |
-| ML-KEM-768 | NIST FIPS 203 | Key encap | ✅ Ready (unused) |
-| ChaCha20-Poly1305 | RFC 8439 | Encryption | ✅ Implemented |
-| HKDF-SHA3-256 | RFC 5869 + FIPS 202 | Key derivation | ✅ Implemented |
-| SHA3-256 | FIPS 202 | Hashing | ✅ Implemented |
+| Algorithm         | Standard            | Purpose        | Status            |
+| ----------------- | ------------------- | -------------- | ----------------- |
+| ML-DSA-65         | NIST FIPS 204       | Signatures     | ✅ Implemented    |
+| ML-KEM-768        | NIST FIPS 203       | Key encap      | ✅ Ready (unused) |
+| ChaCha20-Poly1305 | RFC 8439            | Encryption     | ✅ Implemented    |
+| HKDF-SHA3-256     | RFC 5869 + FIPS 202 | Key derivation | ✅ Implemented    |
+| SHA3-256          | FIPS 202            | Hashing        | ✅ Implemented    |
 
 ### Security Properties ✅
 
@@ -122,6 +127,7 @@ Development Time:
 ## 📦 Release Checklist
 
 ### Code ✅
+
 - [x] Core functionality complete
 - [x] All tests passing (22/22)
 - [x] No known bugs
@@ -129,6 +135,7 @@ Development Time:
 - [x] Memory leak testing
 
 ### Documentation ✅
+
 - [x] README with examples
 - [x] Getting started guide
 - [x] CLI reference
@@ -138,17 +145,20 @@ Development Time:
 - [x] Demo GIF
 
 ### Infrastructure ✅
+
 - [x] GitHub Actions CI
 - [x] Multi-platform builds
 - [x] Format checking
 - [x] Automated testing
 
 ### Legal ✅
+
 - [x] MIT License
 - [x] No dependencies with incompatible licenses
 - [x] Security disclaimer in README
 
 ### Missing (Not Blockers)
+
 - [ ] Security audit (planned Q1 2026)
 - [ ] Windows testing (Linux + macOS confirmed)
 - [ ] Performance benchmarks (fast enough, not documented)
@@ -161,6 +171,7 @@ Development Time:
 ### Version: v0.1.0-alpha
 
 ### Tag Message:
+
 ```
 Zault v0.1.0 - Post-Quantum Encrypted Storage (Alpha)
 
@@ -192,7 +203,7 @@ Known limitations:
 
 Use at your own risk. Recommended for testing and evaluation.
 
-Documentation: https://github.com/yourusername/zault
+Documentation: https://github.com/mattneel/zault
 ```
 
 ### Release Steps:
@@ -226,6 +237,7 @@ git push origin v0.1.0
 ### Platforms to Share
 
 **Technical Communities:**
+
 - Hacker News (Show HN: Zault - Post-Quantum Encrypted Storage)
 - Reddit r/crypto
 - Reddit r/selfhosted
@@ -234,6 +246,7 @@ git push origin v0.1.0
 - Mastodon #infosec
 
 **Content:**
+
 ```
 Show HN: Zault - Post-Quantum Encrypted Storage (Zero-Knowledge)
 
@@ -246,7 +259,7 @@ I built Zault - zero-knowledge storage with post-quantum cryptography:
 - 1,593 lines, 22/22 tests passing
 
 Demo: [link to demo.gif]
-Repo: https://github.com/yourusername/zault
+Repo: https://github.com/mattneel/zault
 
 Tech stack: Zig 0.16 + NIST post-quantum crypto
 
@@ -258,6 +271,7 @@ Feedback welcome!
 **Title:** "Building Zero-Knowledge Storage with Post-Quantum Crypto in 8 Hours"
 
 **Topics:**
+
 - Compiler-driven development methodology
 - Why post-quantum crypto matters
 - Zig's ML-DSA/ML-KEM stdlib integration
@@ -273,6 +287,7 @@ Feedback welcome!
 **Total API discoveries:** ~25
 
 **Key discoveries:**
+
 - ML-DSA at `std.crypto.sign.mldsa`
 - ArrayList unmanaged pattern
 - HKDF extract/expand
@@ -292,12 +307,14 @@ Feedback welcome!
 ### Project Statistics
 
 **Development velocity:**
+
 - Lines per hour: ~200
 - Features per day: Complete system
 - Bugs encountered: ~15 (all caught by compiler/tests)
 - Manual debugging: Minimal
 
 **Quality:**
+
 - Test coverage: 85%
 - Memory leaks: 0
 - Known bugs: 0
@@ -310,6 +327,7 @@ Feedback welcome!
 ### v0.2.0 - Sharing & Sync (Planned: 1-2 months)
 
 **Features:**
+
 - Share tokens with ML-KEM-768
 - Time-limited access
 - Version history
@@ -317,6 +335,7 @@ Feedback welcome!
 - Multi-device sync
 
 **Commands:**
+
 - `zault share <file> --to <pubkey> --expires 24h`
 - `zault receive <token>`
 - `zault push / pull / sync`
@@ -325,6 +344,7 @@ Feedback welcome!
 ### v0.3.0 - Advanced Features (Planned: 3 months)
 
 **Features:**
+
 - WASM client (browser)
 - P2P support
 - Encrypted search
@@ -333,6 +353,7 @@ Feedback welcome!
 ### v1.0.0 - Production Ready (Planned: 6 months)
 
 **Required:**
+
 - External security audit ✅
 - Formal verification (TLA+)
 - 99%+ test coverage
@@ -427,22 +448,23 @@ $ grep "Top secret" ~/.zault/blocks/*/*
 
 ## ✅ All Tasks Complete!
 
-| Task | Status | Time |
-|------|--------|------|
-| Core Library | ✅ | 3h |
-| CLI Implementation | ✅ | 1.5h |
-| Encryption System | ✅ | 2h |
-| README + Demo | ✅ | 1h |
-| CI/CD Setup | ✅ | 0.5h |
-| User Documentation | ✅ | 1h |
-| API Documentation | ✅ | 0.5h |
-| **Total** | **✅** | **~8h** |
+| Task               | Status | Time    |
+| ------------------ | ------ | ------- |
+| Core Library       | ✅     | 3h      |
+| CLI Implementation | ✅     | 1.5h    |
+| Encryption System  | ✅     | 2h      |
+| README + Demo      | ✅     | 1h      |
+| CI/CD Setup        | ✅     | 0.5h    |
+| User Documentation | ✅     | 1h      |
+| API Documentation  | ✅     | 0.5h    |
+| **Total**          | **✅** | **~8h** |
 
 ---
 
 ## 🚀 Ready to Ship!
 
 **Next steps:**
+
 1. Review this document
 2. Tag v0.1.0
 3. Push to GitHub
@@ -455,4 +477,4 @@ $ grep "Top secret" ~/.zault/blocks/*/*
 
 **Built with ⚡ Zig 0.16 • Secured by 🔒 post-quantum crypto • Documented 📚 completely**
 
-*From zero to release-ready in one day. Compiler-driven development works.*
+_From zero to release-ready in one day. Compiler-driven development works._

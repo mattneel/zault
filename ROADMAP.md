@@ -22,6 +22,7 @@ Build the world's most secure, verifiable, and user-friendly post-quantum storag
 ## Phases
 
 ### Phase 0: Pre-Alpha (Completed ✅)
+
 **Timeline:** Nov 2025  
 **Status:** ✅ Complete
 
@@ -33,10 +34,12 @@ Build the world's most secure, verifiable, and user-friendly post-quantum storag
 ---
 
 ### Phase 1: v0.1 Alpha - Foundation
+
 **Timeline:** Nov 2025 - Jan 2026 (8 weeks)  
 **Goal:** Core protocol working end-to-end with local storage
 
 #### Milestone 1.1: Core Library (Weeks 1-3)
+
 **Focus:** Cryptographic primitives and data structures
 
 - [ ] **Identity management**
@@ -44,14 +47,15 @@ Build the world's most secure, verifiable, and user-friendly post-quantum storag
   - [ ] Identity serialization (zpub/zprv format)
   - [ ] BIP39 mnemonic backup
   - [ ] Import/export functions
-  
 - [ ] **Block operations**
+
   - [ ] Block structure and serialization
   - [ ] Content addressing (SHA3-256)
   - [ ] Block signing and verification
   - [ ] Block chain validation
 
 - [ ] **Encryption/Decryption**
+
   - [ ] ChaCha20-Poly1305 wrapper
   - [ ] Key derivation (HKDF)
   - [ ] Metadata encryption
@@ -64,20 +68,24 @@ Build the world's most secure, verifiable, and user-friendly post-quantum storag
   - [ ] Block indexing
 
 **Success Criteria:**
+
 - All core types compile and pass unit tests
 - 100% test coverage on crypto operations
 - Benchmarks show <5ms per block operation
 
 #### Milestone 1.2: CLI Foundation (Weeks 3-5)
+
 **Focus:** Basic command-line interface
 
 - [ ] **Identity commands**
+
   - [ ] `zault init` - Create new vault
   - [ ] `zault identity show` - Display public key
   - [ ] `zault identity export` - Export backup
   - [ ] `zault identity import` - Restore from backup
 
 - [ ] **File operations**
+
   - [ ] `zault add <file>` - Upload file
   - [ ] `zault get <hash>` - Download file
   - [ ] `zault list` - List files
@@ -88,20 +96,24 @@ Build the world's most secure, verifiable, and user-friendly post-quantum storag
   - [ ] `zault log <hash>` - Show version history
 
 **Success Criteria:**
+
 - Can upload, download, and verify a file
 - CLI has helpful error messages
 - Man pages and `--help` output complete
 
 #### Milestone 1.3: Testing & Documentation (Weeks 6-8)
+
 **Focus:** Quality and usability
 
 - [ ] **Test suite**
+
   - [ ] Unit tests for all modules
   - [ ] Integration tests (end-to-end flows)
   - [ ] Property-based tests (round-trip encoding)
   - [ ] Test vectors for interoperability
 
 - [ ] **Documentation**
+
   - [ ] API documentation (autodoc)
   - [ ] CLI usage guide
   - [ ] Protocol spec in mdBook
@@ -115,12 +127,14 @@ Build the world's most secure, verifiable, and user-friendly post-quantum storag
   - [ ] Installation script
 
 **Success Criteria:**
+
 - 80%+ test coverage
 - All public APIs documented
 - CI passing on all platforms
 - First alpha release published
 
 **Deliverables:**
+
 - `zault v0.1.0` binary
 - Complete CLI for local storage
 - Comprehensive test suite
@@ -129,18 +143,21 @@ Build the world's most secure, verifiable, and user-friendly post-quantum storag
 ---
 
 ### Phase 2: v0.2 Beta - Sharing & Sync
+
 **Timeline:** Feb 2026 - Apr 2026 (12 weeks)  
 **Goal:** Enable secure sharing and multi-device sync
 
 #### Milestone 2.1: Share Tokens (Weeks 1-4)
 
 - [ ] **ML-KEM integration**
+
   - [ ] Key encapsulation for recipients
   - [ ] Share token creation
   - [ ] Share token encryption
   - [ ] Expiration handling
 
 - [ ] **Share CLI commands**
+
   - [ ] `zault share <file> --to <pubkey>` - Create share
   - [ ] `zault share <file> --expires <time>` - Time-limited
   - [ ] `zault receive <token>` - Redeem share
@@ -153,6 +170,7 @@ Build the world's most secure, verifiable, and user-friendly post-quantum storag
   - [ ] Server hint embedding
 
 **Success Criteria:**
+
 - Can share file between two identities
 - Expired shares are rejected
 - Share tokens work offline (no server)
@@ -160,6 +178,7 @@ Build the world's most secure, verifiable, and user-friendly post-quantum storag
 #### Milestone 2.2: Version History (Weeks 4-7)
 
 - [ ] **DAG operations**
+
   - [ ] Version chain traversal
   - [ ] Branch handling
   - [ ] Merge detection
@@ -172,6 +191,7 @@ Build the world's most secure, verifiable, and user-friendly post-quantum storag
   - [ ] `zault blame <file>` - Show authorship
 
 **Success Criteria:**
+
 - Can track 1000+ versions per file
 - Diffs show actual content changes
 - Version verification works
@@ -179,6 +199,7 @@ Build the world's most secure, verifiable, and user-friendly post-quantum storag
 #### Milestone 2.3: Server & Sync (Weeks 7-12)
 
 - [ ] **Server implementation**
+
   - [ ] REST API (PUT/GET/DELETE blocks)
   - [ ] ML-DSA authentication
   - [ ] Rate limiting
@@ -186,12 +207,14 @@ Build the world's most secure, verifiable, and user-friendly post-quantum storag
   - [ ] Health checks
 
 - [ ] **Storage backends**
+
   - [ ] S3-compatible storage
   - [ ] Backblaze B2
   - [ ] Cloudflare R2
   - [ ] Generic HTTP backend
 
 - [ ] **Sync protocol**
+
   - [ ] Block discovery
   - [ ] Delta sync (only missing blocks)
   - [ ] Conflict detection
@@ -205,11 +228,13 @@ Build the world's most secure, verifiable, and user-friendly post-quantum storag
   - [ ] `zault sync` - Bidirectional sync
 
 **Success Criteria:**
+
 - Server handles 100+ concurrent clients
 - Sync completes in <5s for typical vault
 - Can run on commodity VPS (<$5/mo)
 
 **Deliverables:**
+
 - `zault v0.2.0` with sharing and sync
 - Self-hostable server
 - S3 backend support
@@ -218,18 +243,21 @@ Build the world's most secure, verifiable, and user-friendly post-quantum storag
 ---
 
 ### Phase 3: v0.3 RC - Advanced Features
+
 **Timeline:** May 2026 - Aug 2026 (16 weeks)  
 **Goal:** Production-ready features and hardening
 
 #### Milestone 3.1: WASM Client (Weeks 1-5)
 
 - [ ] **Browser compatibility**
+
   - [ ] Compile core to WASM
   - [ ] IndexedDB storage backend
   - [ ] Web Crypto API integration
   - [ ] Service Worker for offline
 
 - [ ] **Web UI**
+
   - [ ] File upload/download interface
   - [ ] Share link generation
   - [ ] Identity management
@@ -242,6 +270,7 @@ Build the world's most secure, verifiable, and user-friendly post-quantum storag
   - [ ] Password manager integration
 
 **Success Criteria:**
+
 - Runs in all modern browsers
 - <2MB WASM bundle size
 - Works offline with Service Worker
@@ -249,12 +278,14 @@ Build the world's most secure, verifiable, and user-friendly post-quantum storag
 #### Milestone 3.2: P2P Support (Weeks 5-9)
 
 - [ ] **DHT implementation**
+
   - [ ] Kademlia routing
   - [ ] Block announcement
   - [ ] Peer discovery
   - [ ] NAT traversal
 
 - [ ] **Direct transfer**
+
   - [ ] QUIC transport
   - [ ] Stream multiplexing
   - [ ] Resumable transfers
@@ -267,6 +298,7 @@ Build the world's most secure, verifiable, and user-friendly post-quantum storag
   - [ ] `zault p2p receive` - Listen for transfers
 
 **Success Criteria:**
+
 - Can find peers in <5s
 - Direct transfers faster than server
 - Works on NAT-restricted networks
@@ -274,6 +306,7 @@ Build the world's most secure, verifiable, and user-friendly post-quantum storag
 #### Milestone 3.3: Encrypted Search (Weeks 9-12)
 
 - [ ] **Index encryption**
+
   - [ ] Searchable encryption scheme
   - [ ] Encrypted filename index
   - [ ] Fuzzy search support
@@ -286,6 +319,7 @@ Build the world's most secure, verifiable, and user-friendly post-quantum storag
   - [ ] `zault find --before <date>` - Date filters
 
 **Success Criteria:**
+
 - Search 10,000 files in <100ms
 - Server cannot read search queries
 - Supports wildcards and regex
@@ -293,12 +327,14 @@ Build the world's most secure, verifiable, and user-friendly post-quantum storag
 #### Milestone 3.4: Security Audit (Weeks 13-16)
 
 - [ ] **Preparation**
+
   - [ ] Code freeze for audit
   - [ ] Complete test coverage
   - [ ] Fuzzing with AFL/libFuzzer
   - [ ] Static analysis (Zig built-in)
 
 - [ ] **External audit**
+
   - [ ] Hire reputable crypto auditor
   - [ ] Full protocol review
   - [ ] Implementation review
@@ -311,11 +347,13 @@ Build the world's most secure, verifiable, and user-friendly post-quantum storag
   - [ ] Update threat model
 
 **Success Criteria:**
+
 - Zero critical vulnerabilities
 - Audit report published
 - All recommendations addressed
 
 **Deliverables:**
+
 - `zault v0.3.0` release candidate
 - WASM client and browser extension
 - P2P support
@@ -325,12 +363,14 @@ Build the world's most secure, verifiable, and user-friendly post-quantum storag
 ---
 
 ### Phase 4: v1.0 - Production Release
+
 **Timeline:** Sep 2026 - Dec 2026 (16 weeks)  
 **Goal:** Stable, audited, production-ready release
 
 #### Milestone 4.1: Mobile Apps (Weeks 1-8)
 
 - [ ] **iOS app**
+
   - [ ] Native UI (SwiftUI)
   - [ ] Zig C API bindings
   - [ ] Keychain integration
@@ -345,6 +385,7 @@ Build the world's most secure, verifiable, and user-friendly post-quantum storag
   - [ ] Background sync
 
 **Success Criteria:**
+
 - Apps on App Store and Play Store
 - Native performance
 - Battery-efficient sync
@@ -352,12 +393,14 @@ Build the world's most secure, verifiable, and user-friendly post-quantum storag
 #### Milestone 4.2: Enterprise Features (Weeks 8-12)
 
 - [ ] **Team management**
+
   - [ ] Organization identities
   - [ ] Role-based access control
   - [ ] Audit log exports
   - [ ] Compliance reports
 
 - [ ] **Administration**
+
   - [ ] Admin dashboard
   - [ ] User provisioning
   - [ ] Storage quotas
@@ -370,6 +413,7 @@ Build the world's most secure, verifiable, and user-friendly post-quantum storag
   - [ ] API for automation
 
 **Success Criteria:**
+
 - SOC 2 Type II ready
 - HIPAA-compliant configuration
 - Enterprise customer pilot
@@ -377,6 +421,7 @@ Build the world's most secure, verifiable, and user-friendly post-quantum storag
 #### Milestone 4.3: Performance & Scale (Weeks 12-14)
 
 - [ ] **Optimization**
+
   - [ ] Block compression
   - [ ] Parallel uploads
   - [ ] Streaming decryption
@@ -389,6 +434,7 @@ Build the world's most secure, verifiable, and user-friendly post-quantum storag
   - [ ] CDN integration
 
 **Success Criteria:**
+
 - 10x performance improvement
 - <100MB memory usage for CLI
 - Handles enterprise workloads
@@ -396,12 +442,14 @@ Build the world's most secure, verifiable, and user-friendly post-quantum storag
 #### Milestone 4.4: Final Hardening (Weeks 14-16)
 
 - [ ] **Stability**
+
   - [ ] Beta testing program
   - [ ] Bug bounty program
   - [ ] Stress testing
   - [ ] Edge case handling
 
 - [ ] **Documentation**
+
   - [ ] Complete user guide
   - [ ] Administrator handbook
   - [ ] Developer documentation
@@ -414,12 +462,14 @@ Build the world's most secure, verifiable, and user-friendly post-quantum storag
   - [ ] Marketing materials
 
 **Success Criteria:**
+
 - 99.9% test coverage
 - Zero known critical bugs
 - Complete documentation
 - Ready for production use
 
 **Deliverables:**
+
 - `zault v1.0.0` stable release
 - iOS and Android apps
 - Enterprise features
@@ -431,30 +481,35 @@ Build the world's most secure, verifiable, and user-friendly post-quantum storag
 ## Post-1.0 Features (Future)
 
 ### Advanced Cryptography
+
 - [ ] Threshold signatures (multi-sig vaults)
 - [ ] Zero-knowledge proofs (selective disclosure)
 - [ ] Homomorphic encryption (compute on encrypted data)
 - [ ] Forward secrecy (ratcheting keys)
 
 ### Collaboration
+
 - [ ] Real-time collaborative editing
 - [ ] Operational transforms
 - [ ] Conflict-free replicated data types (CRDTs)
 - [ ] Team channels
 
 ### Platform Integration
+
 - [ ] Desktop apps (Electron alternative)
 - [ ] Command Palette for text editors
 - [ ] Git LFS backend
 - [ ] Database backup integration
 
 ### Decentralization
+
 - [ ] IPFS/Filecoin integration
 - [ ] Blockchain storage commitments
 - [ ] Federated servers
 - [ ] Self-sovereign hosting network
 
 ### Advanced Features
+
 - [ ] File deduplication
 - [ ] Compression
 - [ ] Streaming video playback
@@ -466,6 +521,7 @@ Build the world's most secure, verifiable, and user-friendly post-quantum storag
 ## Success Metrics
 
 ### Technical Metrics
+
 - **Performance:** <100ms for typical operations
 - **Security:** Zero critical vulnerabilities
 - **Reliability:** 99.9% uptime for hosted service
@@ -473,6 +529,7 @@ Build the world's most secure, verifiable, and user-friendly post-quantum storag
 - **Efficiency:** <100MB memory usage
 
 ### Adoption Metrics
+
 - **Week 1:** 100 GitHub stars
 - **Month 1:** 1,000 active users
 - **Month 3:** 10,000 active users
@@ -480,6 +537,7 @@ Build the world's most secure, verifiable, and user-friendly post-quantum storag
 - **Year 1:** 1M active users
 
 ### Community Metrics
+
 - **Contributors:** 50+ contributors
 - **Pull Requests:** 500+ merged PRs
 - **Issues:** <50 open bugs
@@ -523,24 +581,28 @@ Build the world's most secure, verifiable, and user-friendly post-quantum storag
 ## How to Contribute
 
 ### For Developers
-1. Check [GitHub Issues](https://github.com/yourusername/zault/issues)
+
+1. Check [GitHub Issues](https://github.com/mattneel/zault/issues)
 2. Pick an issue tagged `good-first-issue`
 3. Read [CONTRIBUTING.md](../CONTRIBUTING.md)
 4. Submit a PR!
 
 ### For Cryptographers
+
 - Review protocol specification
 - Audit implementation
 - Suggest improvements
 - Write security analysis
 
 ### For Users
+
 - Test alpha/beta releases
 - Report bugs
 - Request features
 - Write documentation
 
 ### For Organizations
+
 - Sponsor development
 - Fund security audits
 - Provide hosting infrastructure
@@ -550,8 +612,8 @@ Build the world's most secure, verifiable, and user-friendly post-quantum storag
 
 ## Contact & Updates
 
-- **GitHub:** https://github.com/yourusername/zault
-- **Discussions:** https://github.com/yourusername/zault/discussions
+- **GitHub:** https://github.com/mattneel/zault
+- **Discussions:** https://github.com/mattneel/zault/discussions
 - **Matrix:** `#zault:matrix.org`
 - **Email:** dev@zault.io
 - **Blog:** https://zault.io/blog (coming soon)

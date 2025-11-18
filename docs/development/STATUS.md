@@ -15,6 +15,7 @@ Zault is a **working, post-quantum secure, zero-knowledge storage system** with 
 ## ✅ What's Working
 
 ### Core Library (1,350 lines)
+
 - ✅ ML-DSA-65 digital signatures (post-quantum)
 - ✅ ChaCha20-Poly1305 authenticated encryption
 - ✅ SHA3-256 content addressing
@@ -25,6 +26,7 @@ Zault is a **working, post-quantum secure, zero-knowledge storage system** with 
 - ✅ Vault master key derivation
 
 ### CLI (199 lines)
+
 - ✅ `zault init` - Create vault with identity
 - ✅ `zault add <file>` - Encrypt and upload files
 - ✅ `zault get <hash>` - Download and decrypt files
@@ -32,6 +34,7 @@ Zault is a **working, post-quantum secure, zero-knowledge storage system** with 
 - ✅ `zault verify <hash>` - Verify signatures
 
 ### Security Features
+
 - ✅ Zero-knowledge storage (server cannot read data)
 - ✅ Post-quantum signatures (ML-DSA-65)
 - ✅ Authenticated encryption (ChaCha20-Poly1305)
@@ -115,11 +118,13 @@ Module breakdown:
 Every file creates **two encrypted blocks:**
 
 **Content Block:**
+
 - Encrypted with random per-file key
 - Contains actual file data
 - Signed with ML-DSA-65
 
 **Metadata Block:**
+
 - Encrypted with vault master key
 - Contains filename, content_key, size, type
 - Chains to content block via prev_hash
@@ -138,6 +143,7 @@ Block 96bdbcab68534461... (type: content)
 ```
 
 **Cannot determine:**
+
 - Filenames
 - File contents
 - File sizes (approximate)
@@ -145,6 +151,7 @@ Block 96bdbcab68534461... (type: content)
 - Encryption keys
 
 **Can only:**
+
 - Store/retrieve blocks by hash
 - Verify signatures
 - See block count
@@ -157,13 +164,13 @@ Block 96bdbcab68534461... (type: content)
 
 **Day 1 (2025-11-18): Complete Phase 1**
 
-| Phase | Time | Lines | Tests | Status |
-|-------|------|-------|-------|--------|
-| 1.1 - Core Library | 1h | 399 | 14/14 | ✅ |
-| 1.1.5 - Core Ops | 2h | 803 | 18/18 | ✅ |
-| 1.2 - CLI | 1.5h | 1281 | 18/18 | ✅ |
-| 1.3 - Encryption | 2h | 1593 | 22/22 | ✅ |
-| **Total** | **~6.5h** | **1593** | **22/22** | **✅** |
+| Phase              | Time      | Lines    | Tests     | Status |
+| ------------------ | --------- | -------- | --------- | ------ |
+| 1.1 - Core Library | 1h        | 399      | 14/14     | ✅     |
+| 1.1.5 - Core Ops   | 2h        | 803      | 18/18     | ✅     |
+| 1.2 - CLI          | 1.5h      | 1281     | 18/18     | ✅     |
+| 1.3 - Encryption   | 2h        | 1593     | 22/22     | ✅     |
+| **Total**          | **~6.5h** | **1593** | **22/22** | **✅** |
 
 **From zero to zero-knowledge storage in one day!**
 
@@ -174,7 +181,7 @@ Block 96bdbcab68534461... (type: content)
 ### Build from Source
 
 ```bash
-git clone https://github.com/yourusername/zault
+git clone https://github.com/mattneel/zault
 cd zault
 zig build
 ```
@@ -304,6 +311,7 @@ status.sh                 # Quick status check
 ### Remaining Tasks (Estimated: 1-2 weeks)
 
 **Documentation (3-5 days):**
+
 - [ ] API documentation (autodoc)
 - [ ] User guide (getting started)
 - [ ] Architecture diagrams
@@ -311,6 +319,7 @@ status.sh                 # Quick status check
 - [ ] Contributing guide
 
 **Testing & CI (2-3 days):**
+
 - [ ] GitHub Actions CI/CD
 - [ ] Integration tests
 - [ ] Performance benchmarks
@@ -318,6 +327,7 @@ status.sh                 # Quick status check
 - [ ] Release builds
 
 **Polish (1-2 days):**
+
 - [ ] Error messages improvement
 - [ ] Progress indicators
 - [ ] Man pages
@@ -331,21 +341,25 @@ status.sh                 # Quick status check
 ### What Makes This Special
 
 1. **Compiler-Driven Development**
+
    - Let errors guide implementation
    - Never consulted docs manually
    - ~20 APIs discovered through compilation
 
 2. **Post-Quantum Security**
+
    - ML-DSA-65 (NIST-standardized)
    - Resistant to quantum attacks
    - Future-proof cryptography
 
 3. **Zero-Knowledge Design**
+
    - Server cannot read anything
    - Metadata fully encrypted
    - True privacy
 
 4. **Clean Architecture**
+
    - Layered design
    - 1,593 lines of clean code
    - 22/22 tests passing
@@ -361,13 +375,13 @@ status.sh                 # Quick status check
 
 ### Cryptographic Stack
 
-| Layer | Algorithm | Purpose |
-|-------|-----------|---------|
-| Signatures | ML-DSA-65 | Post-quantum authentication |
-| Content Encryption | ChaCha20-Poly1305 | Per-file encryption |
-| Metadata Encryption | ChaCha20-Poly1305 | Vault master key |
-| Key Derivation | HKDF-SHA3-256 | Master key from identity |
-| Content Addressing | SHA3-256 | Block integrity |
+| Layer               | Algorithm         | Purpose                     |
+| ------------------- | ----------------- | --------------------------- |
+| Signatures          | ML-DSA-65         | Post-quantum authentication |
+| Content Encryption  | ChaCha20-Poly1305 | Per-file encryption         |
+| Metadata Encryption | ChaCha20-Poly1305 | Vault master key            |
+| Key Derivation      | HKDF-SHA3-256     | Master key from identity    |
+| Content Addressing  | SHA3-256          | Block integrity             |
 
 ### Storage Format
 
@@ -386,6 +400,7 @@ vault/
 ## 📊 Metrics
 
 ### Performance
+
 - Init: ~50ms
 - Add (1MB): ~15ms
 - Get: ~10ms
@@ -393,12 +408,14 @@ vault/
 - Verify: ~2ms
 
 ### Code Quality
+
 - Lines: 1,593
 - Tests: 22/22 ✅
 - Coverage: ~85%
 - Memory: No leaks detected
 
 ### Security
+
 - Encryption: ✅ ChaCha20-Poly1305
 - Signatures: ✅ ML-DSA-65
 - Key derivation: ✅ HKDF-SHA3-256
@@ -410,17 +427,20 @@ vault/
 ## 🚀 Next Steps
 
 ### Phase 2.1 - Share Tokens (Planned)
+
 - ML-KEM-768 integration
 - Encrypt content keys for recipients
 - Time-limited share tokens
 - `zault share / receive` commands
 
 ### Phase 2.2 - Version History (Planned)
+
 - Use prev_hash for version chains
 - Track file modifications
 - `zault log / diff / checkout` commands
 
 ### Phase 2.3 - Server & Sync (Planned)
+
 - REST API server
 - S3 backend
 - Multi-device sync
@@ -433,16 +453,19 @@ vault/
 ### What Worked
 
 1. **Trust the Compiler**
+
    - Error messages were incredibly helpful
    - Showed exact types and fields available
    - Faster than reading documentation
 
 2. **Incremental Testing**
+
    - Test after every small change
    - Caught errors immediately
    - Quick iteration cycles
 
 3. **Let Errors Guide You**
+
    - Each error revealed correct API
    - ArrayList → Unmanaged discovery
    - HKDF extract/expand pattern
@@ -458,6 +481,7 @@ vault/
 ### APIs Discovered
 
 **Through compiler errors, not documentation:**
+
 - std.crypto.sign.mldsa (not std.crypto.ml_dsa)
 - std.crypto.kem.ml_kem.MLKem768
 - ArrayList unmanaged API
@@ -510,11 +534,13 @@ MIT License - See LICENSE file
 ## 🙏 Credits
 
 **Built with:**
+
 - Zig 0.16.0-dev.1363+d2b1aa48a
 - NIST post-quantum cryptography standards
 - Compiler-driven development methodology
 
 **Developed by:**
+
 - Human: Architecture and specification
 - Claude: Implementation using compiler-driven development
 
@@ -523,11 +549,13 @@ MIT License - See LICENSE file
 ## 📞 Support
 
 **Questions?**
+
 - Check documentation in `book/src/`
 - See examples in `demo.sh`
 - Run `./status.sh` for current state
 
 **Found a bug?**
+
 - Check if tests pass: `zig build test`
 - See KICKSTART.md for debugging guide
 
@@ -541,4 +569,4 @@ MIT License - See LICENSE file
 
 **Built with ⚡ Zig • Secured by 🔒 post-quantum crypto • Verified by ✍️ digital signatures**
 
-*"Vault zero. Trust zero. Quantum zero."*
+_"Vault zero. Trust zero. Quantum zero."_
