@@ -426,6 +426,128 @@ pub const Vault = struct {
         return share_token.file_hash;
     }
 
+    /// Export blocks to a portable file with dependencies
+    pub fn exportBlocks(
+        self: *Vault,
+        hashes: []const BlockHash,
+        output_path: []const u8,
+        allocator: std.mem.Allocator,
+    ) !void {
+        const file = try std.fs.cwd().createFile(output_path, .{});
+        defer file.close();
+
+        // Write header
+        try file.writeAll("ZAULT_BLOCKS_V1\n");
+
+        var exported = std.AutoHashMap(BlockHash, void).init(allocator);
+        defer exported.deinit();
+
+        // Export each hash and its dependencies
+        for (hashes) |hash| {
+            try self.exportBlockRecursive(hash, file, &exported, allocator);
+        }
+    }
+
+    fn exportBlockRecursive(
+        self: *Vault,
+        hash: BlockHash,
+        file: std.fs.File,
+        exported: *std.AutoHashMap(BlockHash, void),
+        allocator: std.mem.Allocator,
+    ) !void {
+        // Skip if already exported
+        if (exported.contains(hash)) return;
+
+        // Get block
+        const block = try self.store.get(hash);
+        defer allocator.free(block.data);
+
+        // If metadata block, export content block first
+        if (block.block_type == .metadata) {
+            // Decrypt metadata to get content hash
+            const metadata_bytes = try decryptData(
+                block.data,
+                self.master_key,
+                block.nonce,
+                allocator,
+            );
+            defer allocator.free(metadata_bytes);
+
+            var file_metadata = try FileMetadata.deserialize(metadata_bytes, allocator);
+            defer file_metadata.deinit(allocator);
+
+            // Recursively export content block
+            try self.exportBlockRecursive(file_metadata.content_hash, file, exported, allocator);
+        }
+
+        // Serialize and write block
+        const serialized = try block.serialize(allocator);
+        defer allocator.free(serialized);
+
+        // Write: [size: u64][serialized block]
+        var size_bytes: [8]u8 = undefined;
+        std.mem.writeInt(u64, &size_bytes, serialized.len, .little);
+        try file.writeAll(&size_bytes);
+        try file.writeAll(serialized);
+
+        // Mark as exported
+        try exported.put(hash, {});
+    }
+
+    /// Import blocks from a portable file
+    pub fn importBlocks(
+        self: *Vault,
+        import_path: []const u8,
+        allocator: std.mem.Allocator,
+    ) !std.ArrayList(BlockHash) {
+        var imported = std.ArrayList(BlockHash){};
+
+        const file = try std.fs.cwd().openFile(import_path, .{});
+        defer file.close();
+
+        // Read and verify header
+        var header: [16]u8 = undefined;
+        const header_len = try file.read(&header);
+        if (header_len < 15 or !std.mem.eql(u8, header[0..15], "ZAULT_BLOCKS_V1")) {
+            return error.InvalidExportFile;
+        }
+
+        // Read blocks
+        while (true) {
+            // Read size
+            var size_bytes: [8]u8 = undefined;
+            const n = try file.read(&size_bytes);
+            if (n == 0 or n != 8) break; // End of file
+
+            const size = std.mem.readInt(u64, &size_bytes, .little);
+
+            // Read serialized block
+            const serialized = try allocator.alloc(u8, size);
+            defer allocator.free(serialized);
+
+            var total_read: usize = 0;
+            while (total_read < size) {
+                const nread = try file.read(serialized[total_read..]);
+                if (nread == 0) return error.UnexpectedEOF;
+                total_read += nread;
+            }
+
+            // Deserialize
+            const block = try Block.deserialize(serialized, allocator);
+            defer allocator.free(block.data);
+
+            // Store (skip if already exists)
+            self.store.put(block.hash, &block) catch |err| switch (err) {
+                error.AlreadyExists => {},
+                else => return err,
+            };
+
+            try imported.append(allocator, block.hash);
+        }
+
+        return imported;
+    }
+
     /// Clean up resources
     pub fn deinit(self: *Vault) void {
         self.store.deinit();
@@ -553,4 +675,74 @@ test "create and redeem share token" {
     // with sender's master key. This is correct - they only get access to
     // the content block via the share token's content_key.
     // Full implementation would create a metadata block for recipient.
+}
+
+test "export blocks to file" {
+    const allocator = std.testing.allocator;
+
+    const test_dir = "/tmp/test-vault-export";
+    var vault = try Vault.init(allocator, test_dir);
+    defer vault.deinit();
+
+    // Add a file
+    const test_file = "/tmp/test-export-file.txt";
+    const test_data = "Data to export";
+    {
+        const file = try std.fs.cwd().createFile(test_file, .{});
+        defer file.close();
+        try file.writeAll(test_data);
+    }
+    defer std.fs.cwd().deleteFile(test_file) catch {};
+
+    const file_hash = try vault.addFile(test_file);
+
+    // This will fail until we implement exportBlocks
+    const export_path = "/tmp/test-export.zault";
+    try vault.exportBlocks(&[_]BlockHash{file_hash}, export_path, allocator);
+    defer std.fs.cwd().deleteFile(export_path) catch {};
+
+    // Verify export file exists and has content
+    const exported = try std.fs.cwd().openFile(export_path, .{});
+    defer exported.close();
+    const size = try exported.getEndPos();
+    try std.testing.expect(size > 100); // Should have at least header + blocks
+}
+
+test "import blocks from file" {
+    const allocator = std.testing.allocator;
+
+    // Vault 1: Create and export
+    const vault1_dir = "/tmp/test-vault-export1";
+    var vault1 = try Vault.init(allocator, vault1_dir);
+    defer vault1.deinit();
+
+    const test_file = "/tmp/test-import-file.txt";
+    const test_data = "Import test data";
+    {
+        const file = try std.fs.cwd().createFile(test_file, .{});
+        defer file.close();
+        try file.writeAll(test_data);
+    }
+    defer std.fs.cwd().deleteFile(test_file) catch {};
+
+    const file_hash = try vault1.addFile(test_file);
+
+    const export_path = "/tmp/test-import.zault";
+    try vault1.exportBlocks(&[_]BlockHash{file_hash}, export_path, allocator);
+    defer std.fs.cwd().deleteFile(export_path) catch {};
+
+    // Vault 2: Import blocks
+    const vault2_dir = "/tmp/test-vault-import2";
+    var vault2 = try Vault.init(allocator, vault2_dir);
+    defer vault2.deinit();
+
+    // This will fail until we implement importBlocks
+    var imported = try vault2.importBlocks(export_path, allocator);
+    defer imported.deinit(allocator);
+
+    // Should have imported 2 blocks (content + metadata)
+    try std.testing.expect(imported.items.len >= 2);
+
+    // Blocks should now exist in vault2
+    try std.testing.expect(try vault2.store.has(file_hash));
 }
