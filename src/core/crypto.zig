@@ -2,6 +2,29 @@
 //!
 //! This module wraps the Zig standard library's post-quantum cryptography
 //! implementations and other crypto primitives used by Zault.
+//!
+//! ## Algorithms
+//!
+//! - **ML-DSA-65** - Digital signatures (NIST FIPS 204, ~192-bit security)
+//! - **ML-KEM-768** - Key encapsulation (NIST FIPS 203, ~192-bit security)
+//! - **ChaCha20-Poly1305** - Authenticated encryption (RFC 8439, 256-bit)
+//! - **HKDF-SHA3-256** - Key derivation (RFC 5869 + FIPS 202)
+//! - **SHA3-256** - Cryptographic hashing (FIPS 202)
+//!
+//! ## Example
+//!
+//! ```zig
+//! const crypto = @import("crypto.zig");
+//!
+//! // Generate ML-DSA keypair
+//! const keypair = crypto.MLDSA65.KeyPair.generate();
+//!
+//! // Hash data
+//! var hasher = crypto.Sha3_256.init(.{});
+//! hasher.update("hello");
+//! var hash: [32]u8 = undefined;
+//! hasher.final(&hash);
+//! ```
 
 const std = @import("std");
 

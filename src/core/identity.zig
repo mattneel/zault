@@ -1,13 +1,35 @@
 //! Identity management for Zault
 //!
-//! Identities are ML-DSA keypairs with metadata.
-//! Public identities are encoded as "zpub1..." strings.
-//! Private identities are encoded as "zprv1..." strings.
+//! Identities are ML-DSA-65 keypairs that serve as your cryptographic identity.
+//! Your identity is your vault - no passwords, just keys.
+//!
+//! ## Structure
+//!
+//! - **Public key** - 1,952 bytes (ML-DSA-65)
+//! - **Secret key** - 4,032 bytes (ML-DSA-65)
+//! - **Created timestamp** - Unix timestamp
+//! - **Version** - Protocol version (0x01)
+//!
+//! ## Example
+//!
+//! ```zig
+//! // Generate new identity
+//! const identity = Identity.generate();
+//!
+//! // Save to file
+//! try identity.save("/path/to/identity.bin");
+//!
+//! // Load from file
+//! const loaded = try Identity.load("/path/to/identity.bin");
+//! ```
 
 const std = @import("std");
 const crypto = @import("crypto.zig");
 
 /// Zault identity structure
+///
+/// Represents a cryptographic identity using ML-DSA-65 keypairs.
+/// This is your vault identity - backup the secret key!
 pub const Identity = struct {
     /// Public key (ML-DSA-65)
     public_key: [crypto.MLDSA65.PublicKey.encoded_length]u8,

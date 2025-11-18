@@ -1,6 +1,40 @@
 //! Vault - High-level operations for Zault storage
 //!
-//! The Vault ties together identity, blocks, and storage into a unified interface.
+//! The Vault provides a high-level interface for encrypted file storage.
+//! It manages identity, encryption keys, blocks, and storage.
+//!
+//! ## Usage
+//!
+//! ```zig
+//! const Vault = @import("vault.zig").Vault;
+//!
+//! // Initialize or load vault
+//! var vault = try Vault.init(allocator, "/path/to/vault");
+//! defer vault.deinit();
+//!
+//! // Add file (encrypts automatically)
+//! const hash = try vault.addFile("secret.pdf");
+//!
+//! // Retrieve file (decrypts automatically)
+//! try vault.getFile(hash, "output.pdf");
+//!
+//! // List all files
+//! var files = try vault.listFiles();
+//! defer {
+//!     for (files.items) |*f| {
+//!         allocator.free(f.filename);
+//!         allocator.free(f.mime_type);
+//!     }
+//!     files.deinit(allocator);
+//! }
+//! ```
+//!
+//! ## Security
+//!
+//! - Files encrypted with unique keys (ChaCha20-Poly1305)
+//! - Metadata encrypted with vault master key
+//! - All blocks signed with ML-DSA-65
+//! - Master key derived from identity via HKDF
 
 const std = @import("std");
 const Identity = @import("identity.zig").Identity;

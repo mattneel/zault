@@ -5,6 +5,39 @@
 //! - File size and MIME type
 //! - Content block hash
 //! - Per-file encryption key and nonce
+//!
+//! ## Security
+//!
+//! Metadata is encrypted with the vault master key (derived from identity).
+//! This means the server cannot see:
+//! - Filenames
+//! - File sizes (exact)
+//! - MIME types
+//! - Encryption keys
+//!
+//! ## Example
+//!
+//! ```zig
+//! const metadata = FileMetadata{
+//!     .version = 0x01,
+//!     .filename = "secret.pdf",
+//!     .size = 1024,
+//!     .mime_type = "application/pdf",
+//!     .created = 0,
+//!     .modified = 0,
+//!     .content_hash = content_block.hash,
+//!     .content_key = encryption_key,
+//!     .content_nonce = nonce,
+//! };
+//!
+//! // Serialize
+//! const bytes = try metadata.serialize(allocator);
+//! defer allocator.free(bytes);
+//!
+//! // Deserialize
+//! var loaded = try FileMetadata.deserialize(bytes, allocator);
+//! defer loaded.deinit(allocator);
+//! ```
 
 const std = @import("std");
 const crypto = @import("crypto.zig");

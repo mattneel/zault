@@ -2,6 +2,40 @@
 //!
 //! Blocks are the fundamental unit of storage. Every piece of data
 //! is stored as a content-addressed, signed, encrypted block.
+//!
+//! ## Block Types
+//!
+//! - **content** - Encrypted file data
+//! - **metadata** - Encrypted file metadata (filename, size, keys)
+//! - **index** - Directory indexes (not yet implemented)
+//! - **tombstone** - Deletion markers (not yet implemented)
+//! - **share** - Share tokens (not yet implemented)
+//!
+//! ## Example
+//!
+//! ```zig
+//! // Create a block
+//! var block = Block{
+//!     .version = 0x01,
+//!     .block_type = .content,
+//!     .timestamp = 0,
+//!     .author = identity.public_key,
+//!     .data = encrypted_data,
+//!     .nonce = nonce,
+//!     .signature = undefined,
+//!     .prev_hash = [_]u8{0} ** 32,
+//!     .hash = undefined,
+//! };
+//!
+//! // Sign the block
+//! try block.sign(&identity.secret_key, allocator);
+//!
+//! // Compute hash
+//! block.hash = block.computeHash();
+//!
+//! // Verify later
+//! try block.verify(allocator);
+//! ```
 
 const std = @import("std");
 const crypto = @import("crypto.zig");
