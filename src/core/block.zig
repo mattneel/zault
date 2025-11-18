@@ -118,6 +118,119 @@ pub const Block = struct {
         // Verify signature
         try signature.verify(data_to_verify, public_key);
     }
+
+    /// Serialize block to bytes for storage
+    pub fn serialize(self: *const Block, allocator: std.mem.Allocator) ![]u8 {
+        var list = std.ArrayList(u8){};
+
+        // Version (1 byte)
+        try list.append(allocator, self.version);
+
+        // Block type (1 byte)
+        try list.append(allocator, @intFromEnum(self.block_type));
+
+        // Timestamp (8 bytes, little-endian)
+        var ts_bytes: [8]u8 = undefined;
+        std.mem.writeInt(i64, &ts_bytes, self.timestamp, .little);
+        try list.appendSlice(allocator, &ts_bytes);
+
+        // Author (1952 bytes)
+        try list.appendSlice(allocator, &self.author);
+
+        // Nonce (12 bytes)
+        try list.appendSlice(allocator, &self.nonce);
+
+        // Data length (4 bytes)
+        var len_bytes: [4]u8 = undefined;
+        std.mem.writeInt(u32, &len_bytes, @intCast(self.data.len), .little);
+        try list.appendSlice(allocator, &len_bytes);
+
+        // Data (variable)
+        try list.appendSlice(allocator, self.data);
+
+        // Prev hash (32 bytes)
+        try list.appendSlice(allocator, &self.prev_hash);
+
+        // Signature (3309 bytes)
+        try list.appendSlice(allocator, &self.signature);
+
+        // Hash (32 bytes)
+        try list.appendSlice(allocator, &self.hash);
+
+        return try list.toOwnedSlice(allocator);
+    }
+
+    /// Deserialize block from bytes
+    pub fn deserialize(bytes: []const u8, allocator: std.mem.Allocator) !Block {
+        var pos: usize = 0;
+
+        // Read version
+        if (pos + 1 > bytes.len) return error.InvalidBlock;
+        const version = bytes[pos];
+        pos += 1;
+
+        // Read block type
+        if (pos + 1 > bytes.len) return error.InvalidBlock;
+        const block_type: BlockType = @enumFromInt(bytes[pos]);
+        pos += 1;
+
+        // Read timestamp
+        if (pos + 8 > bytes.len) return error.InvalidBlock;
+        const timestamp = std.mem.readInt(i64, bytes[pos..][0..8], .little);
+        pos += 8;
+
+        // Read author
+        if (pos + 1952 > bytes.len) return error.InvalidBlock;
+        var author: [1952]u8 = undefined;
+        @memcpy(&author, bytes[pos..][0..1952]);
+        pos += 1952;
+
+        // Read nonce
+        if (pos + 12 > bytes.len) return error.InvalidBlock;
+        var nonce: [12]u8 = undefined;
+        @memcpy(&nonce, bytes[pos..][0..12]);
+        pos += 12;
+
+        // Read data length
+        if (pos + 4 > bytes.len) return error.InvalidBlock;
+        const data_len = std.mem.readInt(u32, bytes[pos..][0..4], .little);
+        pos += 4;
+
+        // Read data
+        if (pos + data_len > bytes.len) return error.InvalidBlock;
+        const data = try allocator.dupe(u8, bytes[pos..][0..data_len]);
+        pos += data_len;
+
+        // Read prev_hash
+        if (pos + 32 > bytes.len) return error.InvalidBlock;
+        var prev_hash: [32]u8 = undefined;
+        @memcpy(&prev_hash, bytes[pos..][0..32]);
+        pos += 32;
+
+        // Read signature
+        if (pos + 3309 > bytes.len) return error.InvalidBlock;
+        var signature: [3309]u8 = undefined;
+        @memcpy(&signature, bytes[pos..][0..3309]);
+        pos += 3309;
+
+        // Read hash
+        if (pos + 32 > bytes.len) return error.InvalidBlock;
+        var hash: [32]u8 = undefined;
+        @memcpy(&hash, bytes[pos..][0..32]);
+        pos += 32;
+
+        return Block{
+            .version = version,
+            .block_type = block_type,
+            .timestamp = timestamp,
+            .author = author,
+            .data = data,
+            .nonce = nonce,
+            .signature = signature,
+            .prev_hash = prev_hash,
+            .hash = hash,
+        };
+    }
 };
 
 /// Encrypt plaintext data using ChaCha20-Poly1305
@@ -314,4 +427,41 @@ test "data encryption and decryption" {
     var wrong_key: [32]u8 = undefined;
     crypto.random.bytes(&wrong_key);
     try std.testing.expectError(error.AuthenticationFailed, decryptData(ciphertext, wrong_key, nonce, allocator));
+}
+
+test "block serialization round-trip" {
+    const allocator = std.testing.allocator;
+
+    // Create a test block
+    const test_data = "test data for serialization";
+    var block = Block{
+        .version = 0x01,
+        .block_type = .content,
+        .timestamp = 1700000000,
+        .author = [_]u8{0xAB} ** 1952,
+        .data = test_data,
+        .nonce = [_]u8{1} ** 12,
+        .signature = [_]u8{2} ** 3309,
+        .prev_hash = [_]u8{3} ** 32,
+        .hash = [_]u8{4} ** 32,
+    };
+
+    // Serialize
+    const bytes = try block.serialize(allocator);
+    defer allocator.free(bytes);
+
+    // Deserialize
+    const deserialized = try Block.deserialize(bytes, allocator);
+    defer allocator.free(deserialized.data);
+
+    // Compare all fields
+    try std.testing.expectEqual(block.version, deserialized.version);
+    try std.testing.expectEqual(block.block_type, deserialized.block_type);
+    try std.testing.expectEqual(block.timestamp, deserialized.timestamp);
+    try std.testing.expectEqualSlices(u8, &block.author, &deserialized.author);
+    try std.testing.expectEqualSlices(u8, block.data, deserialized.data);
+    try std.testing.expectEqualSlices(u8, &block.nonce, &deserialized.nonce);
+    try std.testing.expectEqualSlices(u8, &block.signature, &deserialized.signature);
+    try std.testing.expectEqualSlices(u8, &block.prev_hash, &deserialized.prev_hash);
+    try std.testing.expectEqualSlices(u8, &block.hash, &deserialized.hash);
 }
