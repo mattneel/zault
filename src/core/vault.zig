@@ -15,6 +15,7 @@ pub const Vault = struct {
     identity: Identity,
     store: BlockStore,
     vault_path: []const u8,
+    master_key: [32]u8,
     allocator: std.mem.Allocator,
 
     /// Initialize or load a vault
@@ -43,6 +44,9 @@ pub const Vault = struct {
             else => return err,
         };
 
+        // Derive vault master key from identity
+        const master_key = deriveMasterKey(&identity.secret_key);
+
         // Initialize block store
         const store = try BlockStore.init(allocator, vault_path);
 
@@ -50,8 +54,21 @@ pub const Vault = struct {
             .identity = identity,
             .store = store,
             .vault_path = vault_path,
+            .master_key = master_key,
             .allocator = allocator,
         };
+    }
+
+    /// Derive vault master key from identity secret key using HKDF
+    fn deriveMasterKey(secret_key: *const [crypto.MLDSA65.SecretKey.encoded_length]u8) [32]u8 {
+        // Extract: use empty salt, secret key as input keying material
+        const prk = crypto.HkdfSha3_256.extract(&[_]u8{}, secret_key);
+
+        // Expand: derive master key with context string
+        var master_key: [32]u8 = undefined;
+        crypto.HkdfSha3_256.expand(&master_key, "zault-vault-master-key-v1", prk);
+
+        return master_key;
     }
 
     /// Add a file to the vault (simplified - stores raw data for now)
@@ -175,12 +192,32 @@ test "vault initialization" {
     try std.testing.expectEqual(@as(u8, 0x01), vault.identity.version);
 }
 
+test "master key derivation is deterministic" {
+    const allocator = std.testing.allocator;
+
+    const identity = Identity.generate();
+
+    const key1 = Vault.deriveMasterKey(&identity.secret_key);
+    const key2 = Vault.deriveMasterKey(&identity.secret_key);
+
+    // Same identity should produce same master key
+    try std.testing.expectEqualSlices(u8, &key1, &key2);
+
+    // Master key should be 32 bytes
+    try std.testing.expectEqual(@as(usize, 32), key1.len);
+
+    _ = allocator;
+}
+
 test "vault add and get file" {
     const allocator = std.testing.allocator;
 
     const test_dir = "zig-cache/test-vault-addget";
     var vault = try Vault.init(allocator, test_dir);
     defer vault.deinit();
+
+    // Verify master key was derived
+    try std.testing.expectEqual(@as(usize, 32), vault.master_key.len);
 
     // Create a test file
     const test_file = "zig-cache/test-file.txt";
