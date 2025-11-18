@@ -105,8 +105,8 @@ test "identity save and load" {
     // Generate an identity
     const identity = Identity.generate();
 
-    // Save to temp file
-    const test_path = "zig-cache/test-identity.bin";
+    // Use /tmp for CI compatibility
+    const test_path = "/tmp/test-identity.bin";
     try identity.save(test_path);
     defer std.fs.cwd().deleteFile(test_path) catch {};
 

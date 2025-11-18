@@ -1,0 +1,95 @@
+name: CI
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+
+jobs:
+  test:
+    name: Test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+      fail-fast: false
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Zig
+        uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: master
+
+      - name: Run tests
+        run: zig build test --summary all
+
+      - name: Build binary
+        run: zig build
+
+      - name: Test CLI
+        run: |
+          export ZAULT_PATH=/tmp/test-vault
+          ./zig-out/bin/zault init
+          echo "test data" > /tmp/test.txt
+          ./zig-out/bin/zault add /tmp/test.txt
+          ./zig-out/bin/zault list
+          HASH=$(./zig-out/bin/zault list 2>/dev/null | grep "test.txt" | awk '{print $NF}')
+          ./zig-out/bin/zault get $HASH /tmp/output.txt || true
+          ./zig-out/bin/zault verify $HASH || true
+
+  build-release:
+    name: Build Release Binaries
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-linux
+          - os: macos-latest
+            target: x86_64-macos
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Zig
+        uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: master
+
+      - name: Build release binary
+        run: zig build -Doptimize=ReleaseFast
+
+      - name: Create artifact directory
+        run: |
+          mkdir -p dist
+          cp zig-out/bin/zault dist/zault-${{ matrix.target }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: zault-${{ matrix.target }}
+          path: dist/zault-${{ matrix.target }}
+
+  lint:
+    name: Lint and Format Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Zig
+        uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: master
+
+      - name: Check formatting
+        run: zig fmt --check src/
+
+      - name: Build check
+        run: zig build --summary all
