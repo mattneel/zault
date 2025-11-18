@@ -25,6 +25,7 @@ jobs:
           tool_versions: |
             zig master
           install: true
+          cache: false
 
       - name: Run tests
         run: zig build test --summary all
@@ -76,6 +77,7 @@ jobs:
           tool_versions: |
             zig master
           install: true
+          cache: false
 
       - name: Build release binary
         run: zig build -Doptimize=ReleaseFast
@@ -112,6 +114,7 @@ jobs:
           tool_versions: |
             zig master
           install: true
+          cache: false
 
       - name: Check formatting
         run: zig fmt --check src/
