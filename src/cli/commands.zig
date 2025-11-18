@@ -16,6 +16,7 @@ const SubCommand = enum {
     verify,
     share,
     receive,
+    import,
     pubkey,
     help,
     version,
@@ -86,6 +87,7 @@ pub fn run(allocator: std.mem.Allocator) !void {
         .verify => try cmdVerify(allocator, &iter, vault_path),
         .share => try cmdShare(allocator, &iter, vault_path),
         .receive => try cmdReceive(allocator, &iter, vault_path),
+        .import => try cmdImport(allocator, &iter, vault_path),
         .pubkey => try cmdPubkey(allocator, &iter, vault_path),
         .help => try printMainHelp(),
         .version => try printVersion(),
@@ -441,6 +443,7 @@ const share_params = clap.parseParamsComptime(
     \\-h, --help              Display help for share command.
     \\    --to <STR>          Recipient's ML-KEM public key (hex).
     \\    --expires <i64>     Expiration timestamp (Unix time).
+    \\    --export <STR>      Export blocks to file.
     \\<HASH>
     \\
 );
@@ -517,8 +520,21 @@ fn cmdShare(allocator: std.mem.Allocator, iter: *std.process.ArgIterator, vault_
         std.debug.print("{x:0>2}", .{byte});
     }
     std.debug.print("\n", .{});
+
+    // Export blocks if requested
+    if (res.args.@"export") |export_path| {
+        std.debug.print("\nExporting blocks...\n", .{});
+        try vault.exportBlocks(&[_]BlockHash{file_hash}, export_path, allocator);
+        std.debug.print("✓ Blocks exported: {s}\n", .{export_path});
+    }
+
     std.debug.print("\nRecipient can redeem with:\n", .{});
     std.debug.print("    zault receive <TOKEN>\n", .{});
+    if (res.args.@"export") |export_path| {
+        std.debug.print("\nSend both:\n", .{});
+        std.debug.print("  1. Token (above)\n", .{});
+        std.debug.print("  2. Blocks file: {s}\n", .{export_path});
+    }
 }
 
 // ============================================================================
@@ -526,13 +542,15 @@ fn cmdShare(allocator: std.mem.Allocator, iter: *std.process.ArgIterator, vault_
 // ============================================================================
 
 const receive_params = clap.parseParamsComptime(
-    \\-h, --help    Display help for receive command.
+    \\-h, --help         Display help for receive command.
+    \\-o, --output <STR>  Retrieve shared file immediately.
     \\<TOKEN>
     \\
 );
 
 const receive_parsers = .{
     .TOKEN = clap.parsers.string,
+    .STR = clap.parsers.string,
 };
 
 fn cmdReceive(allocator: std.mem.Allocator, iter: *std.process.ArgIterator, vault_path: []const u8) !void {
@@ -571,14 +589,24 @@ fn cmdReceive(allocator: std.mem.Allocator, iter: *std.process.ArgIterator, vaul
 
     std.debug.print("Redeeming share token...\n", .{});
 
-    const file_hash = try vault.redeemShare(token_bytes, allocator);
+    const share_info = try vault.redeemShare(token_bytes, allocator);
 
     std.debug.print("✓ Share token redeemed (ML-KEM-768)\n", .{});
     std.debug.print("File hash: ", .{});
-    const hex = std.fmt.bytesToHex(&file_hash, .lower);
+    const hex = std.fmt.bytesToHex(&share_info.file_hash, .lower);
     std.debug.print("{s}\n", .{hex});
-    std.debug.print("\nRetrieve file with:\n", .{});
-    std.debug.print("    zault get {s} output.bin\n", .{hex});
+
+    // If --output specified, retrieve the file immediately
+    if (res.args.output) |output_path| {
+        std.debug.print("\nRetrieving shared file...\n", .{});
+        try vault.getSharedFile(share_info, output_path, allocator);
+        std.debug.print("✓ File retrieved: {s}\n", .{output_path});
+    } else {
+        std.debug.print("\nTo retrieve the shared file:\n", .{});
+        std.debug.print("    # The file blocks were imported earlier\n", .{});
+        std.debug.print("    # But you need the share keys to decrypt\n", .{});
+        std.debug.print("    # Re-run with: zault receive <TOKEN> -o output.bin\n", .{});
+    }
 }
 
 // ============================================================================
@@ -621,5 +649,61 @@ fn cmdPubkey(allocator: std.mem.Allocator, iter: *std.process.ArgIterator, vault
     std.debug.print("\n", .{});
     std.debug.print("\nOthers can share files with you using:\n", .{});
     std.debug.print("    zault share <HASH> --to <YOUR_PUBKEY> --expires <TIME>\n", .{});
+}
+
+// ============================================================================
+// Subcommand: import
+// ============================================================================
+
+const import_params = clap.parseParamsComptime(
+    \\-h, --help    Display help for import command.
+    \\<FILE>
+    \\
+);
+
+const import_parsers = .{
+    .FILE = clap.parsers.string,
+};
+
+fn cmdImport(allocator: std.mem.Allocator, iter: *std.process.ArgIterator, vault_path: []const u8) !void {
+    var diag = clap.Diagnostic{};
+    var res = clap.parseEx(clap.Help, &import_params, import_parsers, iter, .{
+        .diagnostic = &diag,
+        .allocator = allocator,
+    }) catch |err| {
+        std.debug.print("Error: {}\n", .{err});
+        return err;
+    };
+    defer res.deinit();
+
+    if (res.args.help != 0) {
+        std.debug.print("Import blocks from a file\n\n", .{});
+        std.debug.print("USAGE:\n", .{});
+        std.debug.print("    zault import <FILE>\n\n", .{});
+        std.debug.print("Imports blocks from an exported .zault file.\n", .{});
+        return;
+    }
+
+    const import_path = res.positionals[0] orelse {
+        std.debug.print("Error: No file specified\n\n", .{});
+        std.debug.print("USAGE: zault import <FILE>\n", .{});
+        return error.MissingArgument;
+    };
+
+    var vault = try Vault.init(allocator, vault_path);
+    defer vault.deinit();
+
+    std.debug.print("Importing blocks from: {s}\n", .{import_path});
+
+    var imported = try vault.importBlocks(import_path, allocator);
+    defer imported.deinit(allocator);
+
+    std.debug.print("✓ Imported {d} blocks\n", .{imported.items.len});
+
+    // Show what was imported
+    for (imported.items) |hash| {
+        const hex = std.fmt.bytesToHex(&hash, .lower);
+        std.debug.print("  - {s}\n", .{hex[0..16]});
+    }
 }
 

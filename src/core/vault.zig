@@ -402,12 +402,20 @@ pub const Vault = struct {
         return try encryptShareToken(&share_token, recipient_kem_pubkey, allocator);
     }
 
-    /// Redeem a share token and get access to the file
+    /// Information returned when redeeming a share
+    pub const ShareInfo = struct {
+        file_hash: BlockHash,
+        content_key: [32]u8,
+        content_nonce: [12]u8,
+        granted_by: [crypto.MLDSA65.PublicKey.encoded_length]u8,
+    };
+
+    /// Redeem a share token and get decryption info
     pub fn redeemShare(
         self: *Vault,
         encrypted_share: []const u8,
         allocator: std.mem.Allocator,
-    ) !BlockHash {
+    ) !ShareInfo {
         // 1. Decrypt share token using our ML-KEM secret key
         const share_token = try decryptShareToken(
             encrypted_share,
@@ -420,10 +428,54 @@ pub const Vault = struct {
             return error.ShareExpired;
         }
 
-        // 3. Return the file hash from the share token
-        // The file hash points to the metadata block
-        // Recipient can now use getFile() with this hash
-        return share_token.file_hash;
+        // 3. Return the share info with decryption keys
+        return ShareInfo{
+            .file_hash = share_token.file_hash,
+            .content_key = share_token.content_key,
+            .content_nonce = share_token.content_nonce,
+            .granted_by = share_token.granted_by,
+        };
+    }
+
+    /// Get a shared file using provided decryption keys
+    pub fn getSharedFile(
+        self: *Vault,
+        share_info: ShareInfo,
+        output_path: []const u8,
+        allocator: std.mem.Allocator,
+    ) !void {
+        // 1. Retrieve metadata block
+        const metadata_block = try self.store.get(share_info.file_hash);
+        defer allocator.free(metadata_block.data);
+
+        // 2. Verify signature
+        try metadata_block.verify(allocator);
+
+        // 3. Use share_info to get content block directly
+        // (Can't decrypt metadata with our vault key - it's from sender)
+        // Share token provides everything we need
+        const content_hash = metadata_block.prev_hash;
+
+        // 4. Get content block
+        const content_block = try self.store.get(content_hash);
+        defer allocator.free(content_block.data);
+
+        // 5. Verify signature
+        try content_block.verify(allocator);
+
+        // 6. Decrypt with share_info keys
+        const plaintext = try decryptData(
+            content_block.data,
+            share_info.content_key,
+            share_info.content_nonce,
+            allocator,
+        );
+        defer allocator.free(plaintext);
+
+        // 7. Write to output
+        const file = try std.fs.cwd().createFile(output_path, .{});
+        defer file.close();
+        try file.writeAll(plaintext);
     }
 
     /// Export blocks to a portable file with dependencies
@@ -666,15 +718,13 @@ test "create and redeem share token" {
         .allocator = allocator,
     };
 
-    const redeemed_hash = try recipient_vault.redeemShare(share_token, allocator);
+    const share_info = try recipient_vault.redeemShare(share_token, allocator);
 
     // Verify redeemed hash matches original
-    try std.testing.expectEqualSlices(u8, &file_hash, &redeemed_hash);
+    try std.testing.expectEqualSlices(u8, &file_hash, &share_info.file_hash);
 
-    // NOTE: Recipient can't decrypt the file because metadata is encrypted
-    // with sender's master key. This is correct - they only get access to
-    // the content block via the share token's content_key.
-    // Full implementation would create a metadata block for recipient.
+    // NOTE: Share info includes content_key, allowing recipient to decrypt
+    // even though they can't decrypt the sender's metadata block.
 }
 
 test "export blocks to file" {

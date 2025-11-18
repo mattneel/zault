@@ -21,6 +21,7 @@ pub const BlockHash = store.BlockHash;
 pub const Vault = vault.Vault;
 pub const FileMetadata = metadata.FileMetadata;
 pub const Share = share.Share;
+
 test "core modules are accessible (also doubles as a test aggregator)" {
     // Verify all modules are accessible
     _ = crypto;
