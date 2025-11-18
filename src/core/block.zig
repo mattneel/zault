@@ -58,7 +58,133 @@ pub const Block = struct {
         hasher.final(&result);
         return result;
     }
+
+    /// Helper: serialize block data for signing (everything except signature)
+    fn serializeForSigning(self: *const Block, allocator: std.mem.Allocator) ![]u8 {
+        var list = std.ArrayList(u8){};
+
+        // Add all fields except signature
+        try list.append(allocator, self.version);
+        try list.append(allocator, @intFromEnum(self.block_type));
+
+        var timestamp_bytes: [8]u8 = undefined;
+        std.mem.writeInt(i64, &timestamp_bytes, self.timestamp, .little);
+        try list.appendSlice(allocator, &timestamp_bytes);
+
+        try list.appendSlice(allocator, &self.author);
+        try list.appendSlice(allocator, &self.nonce);
+
+        // Data length + data
+        var len_bytes: [4]u8 = undefined;
+        std.mem.writeInt(u32, &len_bytes, @intCast(self.data.len), .little);
+        try list.appendSlice(allocator, &len_bytes);
+        try list.appendSlice(allocator, self.data);
+
+        try list.appendSlice(allocator, &self.prev_hash);
+
+        return try list.toOwnedSlice(allocator);
+    }
+
+    /// Sign this block with a secret key
+    pub fn sign(self: *Block, secret_key_bytes: *const [crypto.MLDSA65.SecretKey.encoded_length]u8, allocator: std.mem.Allocator) !void {
+        // Reconstruct SecretKey from bytes
+        const secret_key = try crypto.MLDSA65.SecretKey.fromBytes(secret_key_bytes.*);
+
+        // Serialize block data for signing
+        const data_to_sign = try self.serializeForSigning(allocator);
+        defer allocator.free(data_to_sign);
+
+        // Create signer and sign
+        var signer = try secret_key.signer(null); // null = deterministic signing
+        signer.update(data_to_sign);
+        const signature = signer.finalize();
+
+        // Store signature bytes
+        self.signature = signature.toBytes();
+    }
+
+    /// Verify the signature on this block
+    pub fn verify(self: *const Block, allocator: std.mem.Allocator) !void {
+        // Reconstruct PublicKey from bytes
+        const public_key = try crypto.MLDSA65.PublicKey.fromBytes(self.author);
+
+        // Reconstruct Signature from bytes
+        const signature = try crypto.MLDSA65.Signature.fromBytes(self.signature);
+
+        // Serialize block data for verification
+        const data_to_verify = try self.serializeForSigning(allocator);
+        defer allocator.free(data_to_verify);
+
+        // Verify signature
+        try signature.verify(data_to_verify, public_key);
+    }
 };
+
+/// Encrypt plaintext data using ChaCha20-Poly1305
+/// Returns ciphertext || tag (16-byte tag appended)
+pub fn encryptData(
+    plaintext: []const u8,
+    key: [32]u8,
+    nonce: [12]u8,
+    allocator: std.mem.Allocator,
+) ![]u8 {
+    // Allocate space for ciphertext + tag
+    const ciphertext_with_tag = try allocator.alloc(u8, plaintext.len + crypto.ChaCha20Poly1305.tag_length);
+    errdefer allocator.free(ciphertext_with_tag);
+
+    const ciphertext = ciphertext_with_tag[0..plaintext.len];
+    var tag: [crypto.ChaCha20Poly1305.tag_length]u8 = undefined;
+
+    // Encrypt (no additional data)
+    crypto.ChaCha20Poly1305.encrypt(
+        ciphertext,
+        &tag,
+        plaintext,
+        &[_]u8{}, // no additional authenticated data
+        nonce,
+        key,
+    );
+
+    // Append tag
+    @memcpy(ciphertext_with_tag[plaintext.len..], &tag);
+
+    return ciphertext_with_tag;
+}
+
+/// Decrypt ciphertext data using ChaCha20-Poly1305
+/// Input must be ciphertext || tag (16-byte tag appended)
+pub fn decryptData(
+    ciphertext_with_tag: []const u8,
+    key: [32]u8,
+    nonce: [12]u8,
+    allocator: std.mem.Allocator,
+) ![]u8 {
+    if (ciphertext_with_tag.len < crypto.ChaCha20Poly1305.tag_length) {
+        return error.InvalidCiphertext;
+    }
+
+    const tag_start = ciphertext_with_tag.len - crypto.ChaCha20Poly1305.tag_length;
+    const ciphertext = ciphertext_with_tag[0..tag_start];
+    const tag_slice = ciphertext_with_tag[tag_start..];
+    var tag: [crypto.ChaCha20Poly1305.tag_length]u8 = undefined;
+    @memcpy(&tag, tag_slice);
+
+    // Allocate space for plaintext
+    const plaintext = try allocator.alloc(u8, ciphertext.len);
+    errdefer allocator.free(plaintext);
+
+    // Decrypt and verify
+    try crypto.ChaCha20Poly1305.decrypt(
+        plaintext,
+        ciphertext,
+        tag,
+        &[_]u8{}, // no additional authenticated data
+        nonce,
+        key,
+    );
+
+    return plaintext;
+}
 
 test "block structure compiles" {
     const allocator = std.testing.allocator;
@@ -116,4 +242,76 @@ test "compute hash" {
 
     // Hash should be 32 bytes
     try std.testing.expectEqual(@as(usize, 32), hash1.len);
+}
+
+test "block signing and verification" {
+    const allocator = std.testing.allocator;
+    const Identity = @import("identity.zig").Identity;
+
+    // Generate an identity for testing
+    const identity = Identity.generate();
+
+    // Create a block
+    var block = Block{
+        .version = 0x01,
+        .block_type = .content,
+        .timestamp = 0,
+        .author = identity.public_key,
+        .data = "test data for signing",
+        .nonce = [_]u8{1} ** crypto.ChaCha20Poly1305.nonce_length,
+        .signature = undefined,
+        .prev_hash = [_]u8{0} ** crypto.Sha3_256.digest_length,
+        .hash = undefined,
+    };
+
+    // Sign the block
+    try block.sign(&identity.secret_key, allocator);
+
+    // Verify should succeed
+    try block.verify(allocator);
+
+    // Tamper with the data
+    const original_data = block.data;
+    block.data = "tampered data";
+
+    // Verification should now fail
+    try std.testing.expectError(error.SignatureVerificationFailed, block.verify(allocator));
+
+    // Restore data
+    block.data = original_data;
+
+    // Verification should succeed again
+    try block.verify(allocator);
+}
+
+test "data encryption and decryption" {
+    const allocator = std.testing.allocator;
+
+    const plaintext = "secret data that needs encryption";
+    var key: [32]u8 = undefined;
+    crypto.random.bytes(&key);
+    var nonce: [12]u8 = undefined;
+    crypto.random.bytes(&nonce);
+
+    // Encrypt
+    const ciphertext = try encryptData(plaintext, key, nonce, allocator);
+    defer allocator.free(ciphertext);
+
+    // Ciphertext should be longer (includes 16-byte tag)
+    try std.testing.expect(ciphertext.len == plaintext.len + 16);
+
+    // Ciphertext should not match plaintext
+    try std.testing.expect(!std.mem.eql(u8, plaintext, ciphertext[0..plaintext.len]));
+
+    // Decrypt
+    const decrypted = try decryptData(ciphertext, key, nonce, allocator);
+    defer allocator.free(decrypted);
+
+    // Should match original
+    try std.testing.expectEqualStrings(plaintext, decrypted);
+
+    // Wrong key should fail
+    var wrong_key: [32]u8 = undefined;
+    crypto.random.bytes(&wrong_key);
+    try std.testing.expectError(error.AuthenticationFailed, decryptData(ciphertext, wrong_key, nonce, allocator));
 }
