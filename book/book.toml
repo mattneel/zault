@@ -12,8 +12,8 @@ create-missing = false
 [output.html]
 default-theme = "rust"
 preferred-dark-theme = "navy"
-git-repository-url = "https://github.com/yourusername/zault"
-edit-url-template = "https://github.com/yourusername/zault/edit/master/book/{path}"
+git-repository-url = "https://github.com/mattneel/zault"
+edit-url-template = "https://github.com/mattneel/zault/edit/master/book/{path}"
 additional-css = ["theme/shiki.css"]
 additional-js = ["theme/highlight.js"]
 

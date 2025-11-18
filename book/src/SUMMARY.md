@@ -1,26 +1,14 @@
 # Summary
 
-
-# Protocol
-
-- [Specification](protocol-specification.md)
-- [Security Model](security-model.md)
-- [Cryptographic Primitives](cryptography.md)
+[Introduction](./README.md)
 
 # User Guide
 
-- [Getting Started](getting-started.md)
-- [CLI Reference](cli-reference.md)
-- [Self-Hosting](self-hosting.md)
+- [Getting Started](./getting-started.md)
+- [CLI Reference](./cli-reference.md)
+- [FAQ](./faq.md)
 
-# Developer Guide
+# Protocol
 
-- [Architecture](architecture.md)
-- [API Reference](api-reference.md)
-- [Contributing](contributing.md)
-
-# Reference
-
-- [Wire Format](wire-format.md)
-- [Test Vectors](test-vectors.md)
-- [FAQ](faq.md)
+- [Specification](./protocol-specification.md)
+- [Security Model](./security-model.md)

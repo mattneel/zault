@@ -35,7 +35,7 @@ Visit [ziglang.org/download](https://ziglang.org/download/) and download the lat
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/zault
+git clone https://github.com/mattneel/zault
 cd zault
 
 # Build
@@ -71,6 +71,7 @@ Initializing vault at /home/user/.zault
 ```
 
 This creates:
+
 - `~/.zault/` directory
 - `~/.zault/identity.bin` - Your ML-DSA-65 keypair
 - `~/.zault/blocks/` - Content-addressed storage
@@ -96,6 +97,7 @@ Hash: 8578287ea915b760...
 ```
 
 **What just happened:**
+
 1. Zault read `secret.txt`
 2. Generated a random encryption key for this file
 3. Encrypted the file with ChaCha20-Poly1305
@@ -136,6 +138,7 @@ $ diff secret.txt decrypted.txt
 ```
 
 **What happened:**
+
 1. Retrieved metadata block
 2. Verified ML-DSA signature
 3. Decrypted metadata with vault master key
@@ -167,6 +170,7 @@ $ od -A x -t x1z ~/.zault/blocks/*/* | head -5
 Every file you add creates **two blocks**:
 
 ### Content Block (Encrypted File Data)
+
 ```
 - Type: content
 - Data: [your file, encrypted with random key]
@@ -175,6 +179,7 @@ Every file you add creates **two blocks**:
 ```
 
 ### Metadata Block (Encrypted File Info)
+
 ```
 - Type: metadata
 - Data: [encrypted metadata containing:]
@@ -240,6 +245,7 @@ zault init
 The block was tampered with. This is a **security feature** - don't ignore it!
 
 Possible causes:
+
 - Storage corruption
 - Malicious modification
 - Using wrong vault/identity
@@ -294,11 +300,13 @@ zault list
 ## Performance Tips
 
 Zault is designed to be fast:
+
 - **Small files (<1MB):** ~10ms per file
 - **Large files (100MB):** ~100ms (mostly I/O)
 - **Listing:** Fast even with thousands of files
 
 If performance is slow:
+
 - Check disk I/O (SSD recommended)
 - Ensure Zig is built with optimization: `zig build -Doptimize=ReleaseFast`
 
