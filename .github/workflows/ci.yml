@@ -20,9 +20,11 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Zig
-        uses: mlugg/setup-zig@v2
+        uses: jdx/mise-action@v3
         with:
-          version: 0.16.0-dev.1363+d2b1aa48a
+          tool_versions: |
+            zig master
+          install: true
 
       - name: Run tests
         run: zig build test --summary all
@@ -69,9 +71,11 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Zig
-        uses: mlugg/setup-zig@v2
+        uses: jdx/mise-action@v3
         with:
-          version: 0.16.0-dev.1363+d2b1aa48a
+          tool_versions: |
+            zig master
+          install: true
 
       - name: Build release binary
         run: zig build -Doptimize=ReleaseFast
@@ -103,9 +107,11 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Zig
-        uses: mlugg/setup-zig@v2
+        uses: jdx/mise-action@v3
         with:
-          version: 0.16.0-dev.1363+d2b1aa48a
+          tool_versions: |
+            zig master
+          install: true
 
       - name: Check formatting
         run: zig fmt --check src/
