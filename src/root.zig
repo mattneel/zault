@@ -1,23 +1,26 @@
-//! By convention, root.zig is the root source file when making a library.
+//! Zault - Post-quantum encrypted storage library
+//!
+//! This is the main library entry point for the Zault core functionality.
+
 const std = @import("std");
 
-pub fn bufferedPrint() !void {
-    // Stdout is for the actual output of your application, for example if you
-    // are implementing gzip, then only the compressed bytes should be sent to
-    // stdout, not any debugging messages.
-    var stdout_buffer: [1024]u8 = undefined;
-    var stdout_writer = std.fs.File.stdout().writer(&stdout_buffer);
-    const stdout = &stdout_writer.interface;
+// Export core modules
+pub const crypto = @import("core/crypto.zig");
+pub const identity = @import("core/identity.zig");
+pub const block = @import("core/block.zig");
+pub const store = @import("core/store.zig");
 
-    try stdout.print("Run `zig build test` to run the tests.\n", .{});
+// Re-export commonly used types
+pub const Identity = identity.Identity;
+pub const Block = block.Block;
+pub const BlockType = block.BlockType;
+pub const BlockStore = store.BlockStore;
+pub const BlockHash = store.BlockHash;
 
-    try stdout.flush(); // Don't forget to flush!
-}
-
-pub fn add(a: i32, b: i32) i32 {
-    return a + b;
-}
-
-test "basic add functionality" {
-    try std.testing.expect(add(3, 7) == 10);
+test "core modules are accessible" {
+    // Verify all modules are accessible
+    _ = crypto;
+    _ = identity;
+    _ = block;
+    _ = store;
 }
