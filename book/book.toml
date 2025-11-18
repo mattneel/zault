@@ -2,11 +2,9 @@
 title = "Zault Documentation"
 authors = ["Zault Contributors"]
 language = "en"
-multilingual = false
 src = "src"
 
 [build]
-build-dir = "book"
 create-missing = false
 
 [output.html]
