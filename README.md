@@ -184,13 +184,23 @@ $ zault get 8578287e... -o output.pdf
 - ✅ Multi-platform (5 platforms)
 
 **What's Missing:**
-- ⚠️ Not yet audited (planned Q3 2026)
-- ⚠️ No server/sync (planned v0.3.0)
-- ⚠️ Offline sharing only
+- ⚠️ **Not yet audited** by external security firm (planned v1.0)
+- ⚠️ **No server/sync** (planned v0.3.0)
+- ⚠️ **Offline sharing only** (export/import workflow, no automatic sync)
 
-**Recommendation:**
-- **Safe for:** Personal use, testing, non-critical data
-- **Wait for v1.0:** Production, healthcare, financial data
+**Recommended for:**
+- Experimentation and learning about post-quantum cryptography
+- Hobby projects and personal backups
+- Non-irreplaceable data
+- Understanding zero-knowledge architecture
+
+**NOT recommended yet for:**
+- Regulated/compliance data (HIPAA, SOC2, GDPR) - wait for audit
+- Safety-critical or high-value data
+- Production deployments
+- Irreplaceable data without other backups
+
+**Why:** Alpha software, not yet independently audited. Cryptography is NIST-standardized but implementation needs external review (planned v1.0).
 
 ---
 
