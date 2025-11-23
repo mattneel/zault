@@ -37,9 +37,9 @@ pub const Identity = struct {
     /// Secret key (ML-DSA-65) for signatures
     secret_key: [crypto.MLDSA65.SecretKey.encoded_length]u8,
     /// Public key (ML-KEM-768) for key encapsulation
-    kem_public_key: [crypto.MLKem768.PublicKey.bytes_length]u8,
+    kem_public_key: [crypto.MLKem768.PublicKey.encoded_length]u8,
     /// Secret key (ML-KEM-768) for key decapsulation
-    kem_secret_key: [crypto.MLKem768.SecretKey.bytes_length]u8,
+    kem_secret_key: [crypto.MLKem768.SecretKey.encoded_length]u8,
     /// Creation timestamp (Unix time)
     created_at: i64,
     /// Protocol version

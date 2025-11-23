@@ -706,4 +706,3 @@ fn cmdImport(allocator: std.mem.Allocator, iter: *std.process.ArgIterator, vault
         std.debug.print("  - {s}\n", .{hex[0..16]});
     }
 }
-

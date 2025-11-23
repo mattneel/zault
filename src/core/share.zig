@@ -114,7 +114,7 @@ pub const ShareToken = struct {
 /// Encrypt a share token for a recipient using ML-KEM-768
 pub fn encryptShareToken(
     token: *const ShareToken,
-    recipient_pubkey: *const [crypto.MLKem768.PublicKey.bytes_length]u8,
+    recipient_pubkey: *const [crypto.MLKem768.PublicKey.encoded_length]u8,
     allocator: std.mem.Allocator,
 ) ![]u8 {
     // 1. Serialize the token
@@ -153,7 +153,7 @@ pub fn encryptShareToken(
 /// Decrypt a share token using ML-KEM-768
 pub fn decryptShareToken(
     encrypted: []const u8,
-    recipient_seckey: *const [crypto.MLKem768.SecretKey.bytes_length]u8,
+    recipient_seckey: *const [crypto.MLKem768.SecretKey.encoded_length]u8,
     allocator: std.mem.Allocator,
 ) !ShareToken {
     var pos: usize = 0;

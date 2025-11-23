@@ -367,7 +367,7 @@ pub const Vault = struct {
     pub fn createShare(
         self: *Vault,
         file_hash: BlockHash,
-        recipient_kem_pubkey: *const [crypto.MLKem768.PublicKey.bytes_length]u8,
+        recipient_kem_pubkey: *const [crypto.MLKem768.PublicKey.encoded_length]u8,
         expires_at: i64,
         allocator: std.mem.Allocator,
     ) ![]u8 {
