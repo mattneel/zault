@@ -25,10 +25,11 @@ $ zault receive <token> -o secret.pdf
 
 **Nation-states are harvesting encrypted data NOW** to decrypt when quantum computers arrive.
 
-Zault makes that **mathematically impossible** with:
-- **ML-KEM-768** - Post-quantum key encapsulation
-- **ML-DSA-65** - Post-quantum digital signatures
-- **Zero-knowledge** - Server cannot decrypt anything
+Zault makes that **cryptographically infeasible** (under standard assumptions for ML-KEM-768/ML-DSA-65) with:
+- **ML-KEM-768** (Kyber-768, NIST FIPS 203) - Post-quantum key encapsulation
+- **ML-DSA-65** (Dilithium, NIST FIPS 204) - Post-quantum digital signatures
+- **ChaCha20-Poly1305** (RFC 8439) - Authenticated encryption
+- **Zero-knowledge** - Server never receives decryption keys
 - **File sharing** - Secure, quantum-safe sharing
 
 Built in Zig with **NIST-standardized post-quantum cryptography**.
@@ -45,7 +46,7 @@ Built in Zig with **NIST-standardized post-quantum cryptography**.
 | Google Drive | ✅ Yes | ❌ No | ✅ Yes | ❌ No |
 | ProtonDrive | 🤷 Claims | ❌ No | ⚠️ Limited | ⚠️ Claims |
 | Tresorit | 🤷 "Trust us" | ❌ No | ✅ Yes | ❌ Closed source |
-| **Zault** | **❌ Impossible** | **✅ Yes** | **✅ Yes** | **✅ Yes** |
+| **Zault** | **❌ E2E Encrypted** | **✅ Yes** | **✅ Yes** | **✅ Yes** |
 
 ### Zault's Guarantees
 
@@ -77,7 +78,18 @@ Server sees only encrypted blobs:
 }
 ```
 
-Server CANNOT see: filenames, contents, sizes, types, keys.
+**Server CANNOT see:**
+- File contents (encrypted with ChaCha20-Poly1305)
+- Filenames (encrypted in metadata blocks)
+- Encryption keys (never transmitted)
+- MIME types (encrypted in metadata)
+
+**Server CAN see:**
+- Number of blocks stored
+- Block sizes (reveals approximate file sizes)
+- Access patterns (timing, frequency)
+
+**Note:** True size hiding would require fixed-size blocks with padding (planned feature).
 
 ### 🤝 Secure File Sharing (v0.2.0)
 
@@ -92,7 +104,7 @@ $ zault receive <token> -o received.pdf
 ✓ File decrypted!
 ```
 
-**Post-quantum secure. Zero-knowledge. Works offline.**
+**Post-quantum secure. Zero-knowledge. Offline sharing workflow** (export/import via files, no always-online server requirement).
 
 ---
 
