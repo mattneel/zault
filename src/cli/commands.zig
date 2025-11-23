@@ -5,7 +5,7 @@ const clap = @import("clap");
 const Vault = @import("../core/vault.zig").Vault;
 const BlockHash = @import("../core/store.zig").BlockHash;
 
-const version = "0.1.0";
+const version = "0.2.0";
 
 // Subcommands enum
 const SubCommand = enum {
