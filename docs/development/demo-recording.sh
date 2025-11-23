@@ -85,8 +85,8 @@ sleep 1.5
 # Step 6: Retrieve file
 echo "📥 Step 6: Retrieve and Decrypt File"
 echo ""
-type_text "zault get $HASH output.txt"
-./zig-out/bin/zault get $HASH /tmp/demo-output.txt
+type_text "zault get $HASH -o output.txt"
+./zig-out/bin/zault get $HASH -o /tmp/demo-output.txt
 echo ""
 sleep 1
 
