@@ -1,5 +1,5 @@
 #!/bin/bash
-# Zault CLI Demo Script - Simple version
+# Zault CLI Demo - Working version
 
 set -e
 
@@ -8,29 +8,30 @@ echo ""
 
 # Clean up
 export ZAULT_PATH=/tmp/zault-demo
-rm -rf $ZAULT_PATH
+rm -rf $ZAULT_PATH /tmp/demo-*.txt
 
 echo "1. Initialize vault"
 ./zig-out/bin/zault init
 echo ""
 
-echo "2. Create and add files"
-echo "Secret document" > /tmp/secret.txt
-./zig-out/bin/zault add /tmp/secret.txt | tee /tmp/hash.txt
-HASH=$(grep "Hash:" /tmp/hash.txt | awk '{print $2}')
+echo "2. Add file"
+echo "Secret document content" > /tmp/demo-secret.txt
+./zig-out/bin/zault add /tmp/demo-secret.txt > /tmp/add-output.txt 2>&1
+cat /tmp/add-output.txt
+HASH=$(cat /tmp/add-output.txt | grep "Hash:" | cut -d' ' -f2)
 echo ""
 
 echo "3. List files"
 ./zig-out/bin/zault list
 echo ""
 
-echo "4. Verify signature"
+echo "4. Verify signature (hash: ${HASH:0:16}...)"
 ./zig-out/bin/zault verify $HASH
 echo ""
 
-echo "5. Retrieve file"
-./zig-out/bin/zault get $HASH -o /tmp/retrieved.txt
-cat /tmp/retrieved.txt
+echo "5. Retrieve and decrypt"
+./zig-out/bin/zault get $HASH -o /tmp/demo-retrieved.txt
+echo "Content: $(cat /tmp/demo-retrieved.txt)"
 echo ""
 
-echo "✓ Demo complete! Vault at: $ZAULT_PATH"
+echo "✓ All operations successful!"
