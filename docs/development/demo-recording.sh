@@ -109,14 +109,3 @@ echo ""
 echo "☝️  Encrypted gibberish - server cannot read this!"
 echo ""
 sleep 2
-
-# Final message
-echo "╔════════════════════════════════════════════════════════════════╗"
-echo "║  ✅ Demo Complete!                                             ║"
-echo "║                                                                 ║"
-echo "║  Zero-knowledge storage with post-quantum cryptography         ║"
-echo "║  Server cannot read filenames or content                       ║"
-echo "║  All operations verified with ML-DSA-65 signatures             ║"
-echo "╚════════════════════════════════════════════════════════════════╝"
-echo ""
-echo "Learn more: https://github.com/mattneel/zault"
