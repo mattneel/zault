@@ -36,7 +36,7 @@ jobs:
         uses: jdx/mise-action@v3
         with:
           tool_versions: |
-            zig master
+            zig 0.16.0-dev.1424+d3e20e71b
           install: true
           cache: false
 

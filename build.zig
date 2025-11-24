@@ -93,6 +93,43 @@ pub fn build(b: *std.Build) void {
     // by passing `--prefix` or `-p`.
     b.installArtifact(exe);
 
+    // =========================================================================
+    // libzault - C FFI shared/static library
+    // =========================================================================
+
+    // Shared library (.so / .dylib / .dll)
+    const libzault_shared = b.addSharedLibrary(.{
+        .name = "zault",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/ffi.zig"),
+            .target = target,
+            .optimize = optimize,
+            .imports = &.{
+                .{ .name = "root", .module = mod },
+            },
+        }),
+    });
+    libzault_shared.linkLibC();
+    b.installArtifact(libzault_shared);
+
+    // Static library (.a / .lib)
+    const libzault_static = b.addStaticLibrary(.{
+        .name = "zault",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/ffi.zig"),
+            .target = target,
+            .optimize = optimize,
+            .imports = &.{
+                .{ .name = "root", .module = mod },
+            },
+        }),
+    });
+    libzault_static.linkLibC();
+    b.installArtifact(libzault_static);
+
+    // Install C header
+    b.installFile("include/zault.h", "include/zault.h");
+
     // This creates a top level step. Top level steps have a name and can be
     // invoked by name when running `zig build` (e.g. `zig build run`).
     // This will evaluate the `run` step rather than the default step.
@@ -145,6 +182,20 @@ pub fn build(b: *std.Build) void {
     const test_step = b.step("test", "Run tests");
     test_step.dependOn(&run_mod_tests.step);
     test_step.dependOn(&run_exe_tests.step);
+
+    // FFI tests
+    const ffi_mod = b.createModule(.{
+        .root_source_file = b.path("src/ffi.zig"),
+        .target = target,
+        .imports = &.{
+            .{ .name = "root", .module = mod },
+        },
+    });
+    const ffi_tests = b.addTest(.{
+        .root_module = ffi_mod,
+    });
+    const run_ffi_tests = b.addRunArtifact(ffi_tests);
+    test_step.dependOn(&run_ffi_tests.step);
 
     // Just like flags, top level steps are also listed in the `--help` menu.
     //
