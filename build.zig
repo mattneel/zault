@@ -138,6 +138,52 @@ pub fn build(b: *std.Build) void {
     // Install C header
     b.installFile("include/zault.h", "include/zault.h");
 
+    // =========================================================================
+    // libzault WASM - Browser-compatible WebAssembly build
+    // =========================================================================
+
+    // Use wasm32-wasi for better stdlib support (random, etc.)
+    // Browser will provide WASI shims via JS
+    const wasm_target = b.resolveTargetQuery(.{
+        .cpu_arch = .wasm32,
+        .os_tag = .wasi,
+    });
+
+    // Create WASM-specific zault module (no filesystem deps)
+    const wasm_zault_mod = b.addModule("zault_wasm_core", .{
+        .root_source_file = b.path("src/root.zig"),
+        .target = wasm_target,
+    });
+
+    const wasm_ffi_mod = b.createModule(.{
+        .root_source_file = b.path("src/ffi_wasm.zig"),
+        .target = wasm_target,
+        .optimize = .ReleaseSmall,
+        .imports = &.{
+            .{ .name = "zault", .module = wasm_zault_mod },
+        },
+    });
+
+    // Build as executable to get .wasm output
+    const libzault_wasm = b.addExecutable(.{
+        .name = "zault",
+        .root_module = wasm_ffi_mod,
+    });
+
+    // WASM-specific settings
+    libzault_wasm.rdynamic = true; // Export all pub export functions
+    libzault_wasm.entry = .disabled; // No entry point, library only
+
+    // Create a dedicated wasm step
+    const wasm_step = b.step("wasm", "Build WASM library for browser");
+    wasm_step.dependOn(&b.addInstallArtifact(libzault_wasm, .{
+        .dest_dir = .{ .override = .{ .custom = "wasm" } },
+    }).step);
+
+    // Also install JS wrapper
+    const install_js = b.addInstallFile(b.path("wasm/zault.js"), "wasm/zault.js");
+    wasm_step.dependOn(&install_js.step);
+
     // This creates a top level step. Top level steps have a name and can be
     // invoked by name when running `zig build` (e.g. `zig build run`).
     // This will evaluate the `run` step rather than the default step.

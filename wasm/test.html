@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zault WASM Test</title>
+    <style>
+        :root {
+            --bg: #0a0a0f;
+            --surface: #12121a;
+            --border: #2a2a3a;
+            --text: #e0e0e0;
+            --accent: #7c3aed;
+            --success: #10b981;
+            --error: #ef4444;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            background: var(--bg);
+            color: var(--text);
+            padding: 2rem;
+            line-height: 1.6;
+        }
+        h1 {
+            color: var(--accent);
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        .card h2 {
+            font-size: 1rem;
+            color: var(--accent);
+            margin-bottom: 0.5rem;
+        }
+        .status {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+        .status.pass { background: var(--success); color: #000; }
+        .status.fail { background: var(--error); color: #fff; }
+        .status.running { background: var(--accent); color: #fff; }
+        pre {
+            background: #000;
+            padding: 1rem;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 0.8rem;
+            margin-top: 0.5rem;
+        }
+        .log { color: #888; }
+        .log.success { color: var(--success); }
+        .log.error { color: var(--error); }
+        #output { white-space: pre-wrap; word-break: break-all; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⚡🔒 Zault WASM Test</h1>
+        
+        <div class="card">
+            <h2>Status</h2>
+            <span id="status" class="status running">Loading...</span>
+            <span id="version"></span>
+        </div>
+
+        <div class="card">
+            <h2>Test Output</h2>
+            <pre id="output"></pre>
+        </div>
+    </div>
+
+    <script type="module">
+        import { Zault, ZaultError } from './zault.js';
+
+        const output = document.getElementById('output');
+        const status = document.getElementById('status');
+        const version = document.getElementById('version');
+
+        function log(msg, type = '') {
+            const line = document.createElement('div');
+            line.className = `log ${type}`;
+            line.textContent = msg;
+            output.appendChild(line);
+        }
+
+        function hex(bytes) {
+            return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        async function runTests() {
+            try {
+                log('Loading WASM module...');
+                const zault = await Zault.init('./zault.wasm');
+                
+                version.textContent = `v${zault.version()}`;
+                log(`✓ Loaded ${zault.version()}`, 'success');
+                log(`  Identity size: ${zault.IDENTITY_LEN} bytes`);
+                log(`  Public identity: ${zault.PUBLIC_IDENTITY_LEN} bytes`);
+                log(`  Signature: ${zault.SIGNATURE_LEN} bytes`);
+                log(`  Message overhead: ${zault.MSG_OVERHEAD} bytes`);
+                log('');
+
+                // Test 1: Identity generation
+                log('Test 1: Generate identity...');
+                const alice = zault.generateIdentity();
+                log(`✓ Generated Alice (${alice.length} bytes)`, 'success');
+                
+                const bob = zault.generateIdentity();
+                log(`✓ Generated Bob (${bob.length} bytes)`, 'success');
+                log('');
+
+                // Test 2: Public identity serialization
+                log('Test 2: Serialize public identity...');
+                const alicePublic = zault.serializePublicIdentity(alice);
+                log(`✓ Alice public: ${alicePublic.length} bytes`, 'success');
+                log(`  First 32 bytes: ${hex(alicePublic.slice(0, 32))}...`);
+                log('');
+
+                // Test 3: Parse public keys
+                log('Test 3: Parse public keys...');
+                const aliceKemPk = zault.parseKemPublicKey(alicePublic);
+                const aliceDsaPk = zault.parseDsaPublicKey(alicePublic);
+                log(`✓ KEM PK: ${aliceKemPk.length} bytes`, 'success');
+                log(`✓ DSA PK: ${aliceDsaPk.length} bytes`, 'success');
+                log('');
+
+                // Test 4: Message encryption
+                log('Test 4: Encrypt message...');
+                const bobPublic = zault.serializePublicIdentity(bob);
+                const bobKemPk = zault.parseKemPublicKey(bobPublic);
+                
+                const message = "Hello from post-quantum land! 🔐";
+                const ciphertext = zault.encryptMessage(bobKemPk, message);
+                log(`✓ Encrypted "${message}"`, 'success');
+                log(`  Ciphertext: ${ciphertext.length} bytes`);
+                log(`  First 32 bytes: ${hex(ciphertext.slice(0, 32))}...`);
+                log('');
+
+                // Test 5: Message decryption
+                log('Test 5: Decrypt message...');
+                const decrypted = zault.decryptMessageString(bob, ciphertext);
+                if (decrypted === message) {
+                    log(`✓ Decrypted: "${decrypted}"`, 'success');
+                } else {
+                    throw new Error(`Decryption mismatch: got "${decrypted}"`);
+                }
+                log('');
+
+                // Test 6: Digital signature
+                log('Test 6: Sign and verify...');
+                const dataToSign = "This is important data";
+                const signature = zault.sign(alice, dataToSign);
+                log(`✓ Signed (${signature.length} bytes)`, 'success');
+                
+                const valid = zault.verify(aliceDsaPk, dataToSign, signature);
+                if (valid) {
+                    log('✓ Signature valid', 'success');
+                } else {
+                    throw new Error('Signature verification failed');
+                }
+
+                // Test invalid signature
+                const invalid = zault.verify(aliceDsaPk, "tampered data", signature);
+                if (!invalid) {
+                    log('✓ Tampered data correctly rejected', 'success');
+                } else {
+                    throw new Error('Should have rejected tampered data');
+                }
+                log('');
+
+                // Test 7: SHA3-256
+                log('Test 7: SHA3-256...');
+                const hash = zault.sha3_256("test");
+                log(`✓ Hash: ${hex(hash)}`, 'success');
+                log('');
+
+                // Test 8: Random bytes
+                log('Test 8: Random bytes...');
+                const rand1 = zault.randomBytes(32);
+                const rand2 = zault.randomBytes(32);
+                if (hex(rand1) !== hex(rand2)) {
+                    log(`✓ Random 1: ${hex(rand1)}`, 'success');
+                    log(`✓ Random 2: ${hex(rand2)}`, 'success');
+                } else {
+                    throw new Error('Random bytes should differ');
+                }
+                log('');
+
+                // All tests passed
+                log('━'.repeat(50));
+                log('All tests passed! 🎉', 'success');
+                status.className = 'status pass';
+                status.textContent = 'PASS';
+
+            } catch (err) {
+                log(`✗ ${err.message}`, 'error');
+                if (err.stack) log(err.stack, 'error');
+                status.className = 'status fail';
+                status.textContent = 'FAIL';
+            }
+        }
+
+        runTests();
+    </script>
+</body>
+</html>
+

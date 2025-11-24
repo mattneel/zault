@@ -2,3 +2,4 @@ zig-out/
 .zig-cache/
 zig-cache/
 book/book/
+*.wasm
