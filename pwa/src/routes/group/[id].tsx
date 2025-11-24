@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * Group chat page
  */
@@ -229,7 +231,7 @@ export default function GroupChat() {
           </Show>
         </div>
         <div class="navbar-end">
-          <A href={`/group/${params.id}/settings`} class="btn btn-ghost btn-sm">
+          <A href={`/group-settings/${params.id}`} class="btn btn-ghost btn-sm">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               class="h-5 w-5"

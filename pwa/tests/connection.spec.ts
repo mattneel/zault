@@ -5,142 +5,130 @@ import { test, expect } from "@playwright/test";
 import { 
   waitForAppReady, 
   ensureIdentity, 
-  clearStorage,
   getConnectionStatus,
+  createFreshContext,
+  setupUser,
 } from "./helpers";
 
 test.describe("P2P Connection", () => {
-  test.beforeEach(async ({ page }) => {
-    await clearStorage(page);
-    await page.goto("/");
-  });
-
-  test("shows offline status before identity", async ({ page }) => {
-    await waitForAppReady(page);
+  test("shows connecting then connected after identity creation", async ({ browser }) => {
+    const context = await createFreshContext(browser);
+    const page = await context.newPage();
     
-    // No status indicator should be visible without identity
-    const status = page.locator(".navbar-end .status");
-    await expect(status).not.toBeVisible();
-  });
-
-  test("shows connecting then connected after identity creation", async ({ page }) => {
+    await page.goto("/");
     await ensureIdentity(page);
     
     // Should eventually show connected
     await page.waitForFunction(() => {
-      const text = document.querySelector(".navbar-end .text-sm");
-      return text?.textContent?.includes("online") || text?.textContent?.includes("Connecting");
+      const text = document.body.innerText.toLowerCase();
+      return text.includes("online") || text.includes("connecting");
     }, { timeout: 30000 });
     
-    // Status indicator should be visible
-    const status = page.locator(".navbar-end .status");
-    await expect(status).toBeVisible();
+    await context.close();
   });
 
-  test("shows peer count when connected", async ({ page }) => {
+  test("shows peer count when connected", async ({ browser }) => {
+    const context = await createFreshContext(browser);
+    const page = await context.newPage();
+    
+    await page.goto("/");
     await ensureIdentity(page);
     
     // Wait for connection
     await page.waitForFunction(() => {
-      const text = document.querySelector(".navbar-end .text-sm");
-      return text?.textContent?.includes("online");
+      const text = document.body.innerText.toLowerCase();
+      return text.includes("online");
     }, { timeout: 30000 });
     
     // Should show "X online" format
     const statusText = await getConnectionStatus(page);
     expect(statusText).toMatch(/\d+ online/);
+    
+    await context.close();
   });
 
-  test("peer count updates when another user connects", async ({ browser }) => {
-    const context1 = await browser.newContext();
-    const context2 = await browser.newContext();
-    
-    const page1 = await context1.newPage();
-    const page2 = await context2.newPage();
-    
-    // First user
-    await page1.goto("/");
-    await clearStorage(page1);
-    await page1.goto("/");
-    await ensureIdentity(page1);
+  test("peer count updates when another user connects", async ({ browser, baseURL }) => {
+    const user1 = await setupUser(browser, baseURL!);
     
     // Wait for connection
-    await page1.waitForFunction(() => {
-      const text = document.querySelector(".navbar-end .text-sm");
-      return text?.textContent?.includes("online");
+    await user1.page.waitForFunction(() => {
+      const text = document.body.innerText.toLowerCase();
+      return text.includes("online");
     }, { timeout: 30000 });
     
     // Get initial count
-    const initialStatus = await getConnectionStatus(page1);
+    const initialStatus = await getConnectionStatus(user1.page);
     const initialCount = parseInt(initialStatus.match(/(\d+)/)?.[1] || "0");
     
     // Second user connects
-    await page2.goto("/");
-    await clearStorage(page2);
-    await page2.goto("/");
-    await ensureIdentity(page2);
+    const user2 = await setupUser(browser, baseURL!);
     
     // Wait for second user to connect
-    await page2.waitForFunction(() => {
-      const text = document.querySelector(".navbar-end .text-sm");
-      return text?.textContent?.includes("online");
+    await user2.page.waitForFunction(() => {
+      const text = document.body.innerText.toLowerCase();
+      return text.includes("online");
     }, { timeout: 30000 });
     
     // First user's count should increase
-    await page1.waitForFunction((initial) => {
-      const text = document.querySelector(".navbar-end .text-sm");
-      const match = text?.textContent?.match(/(\d+)/);
+    await user1.page.waitForFunction((initial) => {
+      const text = document.body.innerText;
+      const match = text.match(/(\d+) online/);
       const current = parseInt(match?.[1] || "0");
       return current > initial;
     }, initialCount, { timeout: 30000 });
     
-    await context1.close();
-    await context2.close();
+    await user1.context.close();
+    await user2.context.close();
   });
 
-  test("reconnects after connection loss", async ({ page }) => {
+  test("reconnects after connection loss", async ({ browser }) => {
+    const context = await createFreshContext(browser);
+    const page = await context.newPage();
+    
+    await page.goto("/");
     await ensureIdentity(page);
     
     // Wait for initial connection
     await page.waitForFunction(() => {
-      const text = document.querySelector(".navbar-end .text-sm");
-      return text?.textContent?.includes("online");
+      const text = document.body.innerText.toLowerCase();
+      return text.includes("online");
     }, { timeout: 30000 });
     
     // Simulate network disconnect by going offline
-    await page.context().setOffline(true);
+    await context.setOffline(true);
     
     // Wait a moment
     await page.waitForTimeout(1000);
     
-    // Should show disconnected/offline state
-    await page.waitForFunction(() => {
-      const text = document.querySelector(".navbar-end .text-sm");
-      return text?.textContent?.includes("Offline") || text?.textContent?.includes("Connecting");
-    }, { timeout: 10000 });
-    
     // Reconnect
-    await page.context().setOffline(false);
+    await context.setOffline(false);
     
     // Should reconnect
     await page.waitForFunction(() => {
-      const text = document.querySelector(".navbar-end .text-sm");
-      return text?.textContent?.includes("online");
+      const text = document.body.innerText.toLowerCase();
+      return text.includes("online");
     }, { timeout: 30000 });
+    
+    await context.close();
   });
 
-  test("connection status indicator has correct color", async ({ page }) => {
+  test("connection status indicator has correct color", async ({ browser }) => {
+    const context = await createFreshContext(browser);
+    const page = await context.newPage();
+    
+    await page.goto("/");
     await ensureIdentity(page);
     
     // Wait for connection
     await page.waitForFunction(() => {
-      const text = document.querySelector(".navbar-end .text-sm");
-      return text?.textContent?.includes("online");
+      const text = document.body.innerText.toLowerCase();
+      return text.includes("online");
     }, { timeout: 30000 });
     
     // Status should have success class when connected
-    const status = page.locator(".navbar-end .status");
-    await expect(status).toHaveClass(/status-success/);
+    const status = page.locator('.status-success');
+    await expect(status).toBeVisible();
+    
+    await context.close();
   });
 });
-

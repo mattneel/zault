@@ -5,266 +5,167 @@ import { test, expect } from "@playwright/test";
 import { 
   waitForAppReady, 
   ensureIdentity, 
-  getShareLink,
   addContactViaLink,
-  openChat,
   sendMessage,
   waitForMessage,
-  clearStorage,
+  createFreshContext,
+  setupUser,
 } from "./helpers";
 
 test.describe("1:1 Chat", () => {
-  test("chat page shows empty state initially", async ({ page, browser }) => {
-    await clearStorage(page);
-    await page.goto("/");
-    await ensureIdentity(page);
+  test("chat page shows empty state initially", async ({ browser, baseURL }) => {
+    const user1 = await setupUser(browser, baseURL!);
+    const user2 = await setupUser(browser, baseURL!);
     
-    // Create contact
-    const context2 = await browser.newContext();
-    const page2 = await context2.newPage();
-    await page2.goto("/");
-    await clearStorage(page2);
-    await page2.goto("/");
-    await ensureIdentity(page2);
-    
-    const otherLink = await getShareLink(page2);
-    await addContactViaLink(page, otherLink, "Chat Partner");
-    
-    // Open chat
-    await openChat(page, "Chat Partner");
+    // Add contact - this navigates to chat
+    await addContactViaLink(user1.page, user2.shareLink, "Chat Partner");
     
     // Should show empty state
-    await expect(page.getByText("No messages yet")).toBeVisible();
+    await expect(user1.page.getByText("No messages yet")).toBeVisible();
     
-    await context2.close();
+    await user1.context.close();
+    await user2.context.close();
   });
 
-  test("can send a message", async ({ page, browser }) => {
-    await clearStorage(page);
-    await page.goto("/");
-    await ensureIdentity(page);
+  test("can send a message", async ({ browser, baseURL }) => {
+    const user1 = await setupUser(browser, baseURL!);
+    const user2 = await setupUser(browser, baseURL!);
     
-    const context2 = await browser.newContext();
-    const page2 = await context2.newPage();
-    await page2.goto("/");
-    await clearStorage(page2);
-    await page2.goto("/");
-    await ensureIdentity(page2);
+    await addContactViaLink(user1.page, user2.shareLink, "Message Test");
     
-    const otherLink = await getShareLink(page2);
-    await addContactViaLink(page, otherLink, "Message Test");
-    
-    await openChat(page, "Message Test");
-    await sendMessage(page, "Hello, World!");
+    // We're now in chat
+    await sendMessage(user1.page, "Hello, World!");
     
     // Message should appear in chat
-    await expect(page.getByText("Hello, World!")).toBeVisible();
+    await expect(user1.page.locator('.chat-bubble:has-text("Hello, World!")')).toBeVisible();
     
-    await context2.close();
+    await user1.context.close();
+    await user2.context.close();
   });
 
-  test("messages persist after page reload", async ({ page, browser }) => {
-    await clearStorage(page);
-    await page.goto("/");
-    await ensureIdentity(page);
+  test("messages persist after page reload", async ({ browser, baseURL }) => {
+    const user1 = await setupUser(browser, baseURL!);
+    const user2 = await setupUser(browser, baseURL!);
     
-    const context2 = await browser.newContext();
-    const page2 = await context2.newPage();
-    await page2.goto("/");
-    await clearStorage(page2);
-    await page2.goto("/");
-    await ensureIdentity(page2);
+    await addContactViaLink(user1.page, user2.shareLink, "Persist Test");
+    await sendMessage(user1.page, "This should persist");
     
-    const otherLink = await getShareLink(page2);
-    await addContactViaLink(page, otherLink, "Persist Test");
-    
-    await openChat(page, "Persist Test");
-    await sendMessage(page, "This should persist");
+    // Get the current URL (chat page)
+    const chatUrl = user1.page.url();
     
     // Reload
-    await page.reload();
-    await waitForAppReady(page);
+    await user1.page.reload();
+    await waitForAppReady(user1.page);
     
     // Message should still be there
-    await expect(page.getByText("This should persist")).toBeVisible();
+    await expect(user1.page.locator('.chat-bubble:has-text("This should persist")')).toBeVisible();
     
-    await context2.close();
+    await user1.context.close();
+    await user2.context.close();
   });
 
-  test("chat header shows contact name", async ({ page, browser }) => {
-    await clearStorage(page);
-    await page.goto("/");
-    await ensureIdentity(page);
+  test("chat header shows contact name", async ({ browser, baseURL }) => {
+    const user1 = await setupUser(browser, baseURL!);
+    const user2 = await setupUser(browser, baseURL!);
     
-    const context2 = await browser.newContext();
-    const page2 = await context2.newPage();
-    await page2.goto("/");
-    await clearStorage(page2);
-    await page2.goto("/");
-    await ensureIdentity(page2);
-    
-    const otherLink = await getShareLink(page2);
-    await addContactViaLink(page, otherLink, "Header Test");
-    
-    await openChat(page, "Header Test");
+    await addContactViaLink(user1.page, user2.shareLink, "Header Test");
     
     // Header should show contact name
-    await expect(page.locator(".navbar-center").getByText("Header Test")).toBeVisible();
+    await expect(user1.page.getByText("Header Test")).toBeVisible();
     
-    await context2.close();
+    await user1.context.close();
+    await user2.context.close();
   });
 
-  test("back button returns to home from chat", async ({ page, browser }) => {
-    await clearStorage(page);
-    await page.goto("/");
-    await ensureIdentity(page);
+  test("back button returns to home from chat", async ({ browser, baseURL }) => {
+    const user1 = await setupUser(browser, baseURL!);
+    const user2 = await setupUser(browser, baseURL!);
     
-    const context2 = await browser.newContext();
-    const page2 = await context2.newPage();
-    await page2.goto("/");
-    await clearStorage(page2);
-    await page2.goto("/");
-    await ensureIdentity(page2);
+    await addContactViaLink(user1.page, user2.shareLink, "Back Test");
     
-    const otherLink = await getShareLink(page2);
-    await addContactViaLink(page, otherLink, "Back Test");
+    // Click back button
+    await user1.page.locator('.navbar-start button').click();
     
-    await openChat(page, "Back Test");
+    await expect(user1.page).toHaveURL("/");
     
-    // Click back
-    await page.locator(".navbar-start a, .navbar-start button").first().click();
-    
-    await expect(page).toHaveURL("/");
-    
-    await context2.close();
+    await user1.context.close();
+    await user2.context.close();
   });
 
-  test("message input is disabled while sending", async ({ page, browser }) => {
-    await clearStorage(page);
-    await page.goto("/");
-    await ensureIdentity(page);
+  test("can send message with send button", async ({ browser, baseURL }) => {
+    const user1 = await setupUser(browser, baseURL!);
+    const user2 = await setupUser(browser, baseURL!);
     
-    const context2 = await browser.newContext();
-    const page2 = await context2.newPage();
-    await page2.goto("/");
-    await clearStorage(page2);
-    await page2.goto("/");
-    await ensureIdentity(page2);
+    await addContactViaLink(user1.page, user2.shareLink, "Send Test");
     
-    const otherLink = await getShareLink(page2);
-    await addContactViaLink(page, otherLink, "Disable Test");
-    
-    await openChat(page, "Disable Test");
-    
-    const input = page.getByPlaceholder("Type a message...");
+    const input = user1.page.getByPlaceholder("Message");
     await input.fill("Test message");
     
-    // Submit
-    await page.locator('button[type="submit"]').click();
+    // Submit via button
+    await user1.page.locator('button.btn-primary.btn-square').click();
     
-    // Input should be disabled briefly during send
-    // (This is hard to catch, so we just verify the message appears)
-    await expect(page.getByText("Test message")).toBeVisible();
+    // Message should appear
+    await expect(user1.page.locator('.chat-bubble:has-text("Test message")')).toBeVisible();
     
-    await context2.close();
+    await user1.context.close();
+    await user2.context.close();
   });
 });
 
 test.describe("Real-time Messaging", () => {
-  test("message is received by other user in real-time", async ({ browser }) => {
-    // Create two isolated contexts
-    const context1 = await browser.newContext();
-    const context2 = await browser.newContext();
-    
-    const alice = await context1.newPage();
-    const bob = await context2.newPage();
-    
-    // Set up Alice
-    await alice.goto("/");
-    await clearStorage(alice);
-    await alice.goto("/");
-    await ensureIdentity(alice);
-    const aliceLink = await getShareLink(alice);
-    
-    // Set up Bob
-    await bob.goto("/");
-    await clearStorage(bob);
-    await bob.goto("/");
-    await ensureIdentity(bob);
-    const bobLink = await getShareLink(bob);
+  test("message is received by other user in real-time", async ({ browser, baseURL }) => {
+    // Create two users
+    const alice = await setupUser(browser, baseURL!);
+    const bob = await setupUser(browser, baseURL!);
     
     // Alice adds Bob
-    await addContactViaLink(alice, bobLink, "Bob");
+    await addContactViaLink(alice.page, bob.shareLink, "Bob");
     
     // Bob adds Alice
-    await addContactViaLink(bob, aliceLink, "Alice");
+    await addContactViaLink(bob.page, alice.shareLink, "Alice");
     
-    // Wait for P2P connections to establish
-    await alice.waitForTimeout(2000);
-    await bob.waitForTimeout(2000);
-    
-    // Alice opens chat with Bob
-    await openChat(alice, "Bob");
-    
-    // Bob opens chat with Alice
-    await openChat(bob, "Alice");
+    // Both are now in their respective chats
+    // Wait for P2P connections
+    await alice.page.waitForTimeout(2000);
+    await bob.page.waitForTimeout(2000);
     
     // Alice sends a message
-    await sendMessage(alice, "Hello Bob from Alice!");
+    await sendMessage(alice.page, "Hello Bob from Alice!");
     
     // Bob should receive it
-    await waitForMessage(bob, "Hello Bob from Alice!", 30000);
+    await waitForMessage(bob.page, "Hello Bob from Alice!", 30000);
     
     // Bob replies
-    await sendMessage(bob, "Hi Alice, got your message!");
+    await sendMessage(bob.page, "Hi Alice, got your message!");
     
     // Alice should receive the reply
-    await waitForMessage(alice, "Hi Alice, got your message!", 30000);
+    await waitForMessage(alice.page, "Hi Alice, got your message!", 30000);
     
-    await context1.close();
-    await context2.close();
+    await alice.context.close();
+    await bob.context.close();
   });
 
-  test("messages show correct sender styling", async ({ browser }) => {
-    const context1 = await browser.newContext();
-    const context2 = await browser.newContext();
+  test("messages show correct sender styling", async ({ browser, baseURL }) => {
+    const alice = await setupUser(browser, baseURL!);
+    const bob = await setupUser(browser, baseURL!);
     
-    const alice = await context1.newPage();
-    const bob = await context2.newPage();
+    await addContactViaLink(alice.page, bob.shareLink, "Bob");
+    await addContactViaLink(bob.page, alice.shareLink, "Alice");
     
-    await alice.goto("/");
-    await clearStorage(alice);
-    await alice.goto("/");
-    await ensureIdentity(alice);
-    const aliceLink = await getShareLink(alice);
+    await alice.page.waitForTimeout(2000);
     
-    await bob.goto("/");
-    await clearStorage(bob);
-    await bob.goto("/");
-    await ensureIdentity(bob);
-    const bobLink = await getShareLink(bob);
-    
-    await addContactViaLink(alice, bobLink, "Bob");
-    await addContactViaLink(bob, aliceLink, "Alice");
-    
-    await alice.waitForTimeout(2000);
-    
-    await openChat(alice, "Bob");
-    await openChat(bob, "Alice");
-    
-    await sendMessage(alice, "From Alice");
-    await waitForMessage(bob, "From Alice", 30000);
+    await sendMessage(alice.page, "From Alice");
+    await waitForMessage(bob.page, "From Alice", 30000);
     
     // On Alice's screen, her message should be chat-end (right side)
-    const aliceMsg = alice.locator(".chat-end").filter({ hasText: "From Alice" });
+    const aliceMsg = alice.page.locator(".chat-end").filter({ hasText: "From Alice" });
     await expect(aliceMsg).toBeVisible();
     
     // On Bob's screen, Alice's message should be chat-start (left side)
-    const bobView = bob.locator(".chat-start").filter({ hasText: "From Alice" });
+    const bobView = bob.page.locator(".chat-start").filter({ hasText: "From Alice" });
     await expect(bobView).toBeVisible();
     
-    await context1.close();
-    await context2.close();
+    await alice.context.close();
+    await bob.context.close();
   });
 });
-

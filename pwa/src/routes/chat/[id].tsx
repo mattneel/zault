@@ -43,17 +43,19 @@ export default function Chat() {
     return storedMessages()
       .map((msg): DisplayMessage | null => {
         try {
-          const ciphertext = fromBase64Url(msg.ciphertext);
+          // Outgoing messages are stored as plaintext locally
           if (!msg.incoming) {
             return {
               id: msg.id,
-              content: msg.ciphertext,
+              content: msg.ciphertext, // This is actually plaintext for outgoing
               timestamp: msg.timestamp,
               incoming: false,
               status: msg.status,
             };
           }
           
+          // Incoming messages need decryption
+          const ciphertext = fromBase64Url(msg.ciphertext);
           const plaintext = decryptMessage(id, ciphertext);
           return {
             id: msg.id,
