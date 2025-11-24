@@ -1,0 +1,39 @@
+{
+  "name": "Zault Chat",
+  "short_name": "Zault",
+  "description": "Post-quantum encrypted P2P messaging",
+  "start_url": "/",
+  "scope": "/",
+  "theme_color": "#1a1a2e",
+  "background_color": "#0f0f1a",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "categories": ["social", "communication", "security"],
+  "icons": [
+    {
+      "src": "pwa-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "pwa-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "pwa-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "New Chat",
+      "short_name": "Chat",
+      "url": "/add",
+      "icons": [{ "src": "pwa-192x192.png", "sizes": "192x192" }]
+    }
+  ]
+}
+

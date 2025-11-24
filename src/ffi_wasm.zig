@@ -40,6 +40,12 @@ pub const ZAULT_MLKEM768_CT_LEN: usize = crypto.MLKem768.ciphertext_length;
 pub const ZAULT_MSG_OVERHEAD: usize = ZAULT_MLKEM768_CT_LEN + 12 + 16;
 pub const ZAULT_PUBLIC_IDENTITY_LEN: usize = ZAULT_MLDSA65_PK_LEN + ZAULT_MLKEM768_PK_LEN;
 
+// ChaCha20-Poly1305 constants
+pub const ZAULT_CHACHA20_KEY_LEN: usize = 32;
+pub const ZAULT_CHACHA20_NONCE_LEN: usize = 12;
+pub const ZAULT_CHACHA20_TAG_LEN: usize = 16;
+pub const ZAULT_CHACHA20_OVERHEAD: usize = ZAULT_CHACHA20_NONCE_LEN + ZAULT_CHACHA20_TAG_LEN;
+
 // Full identity size for serialization (both key pairs + metadata)
 pub const ZAULT_IDENTITY_LEN: usize = 1 + // version
     ZAULT_MLDSA65_PK_LEN + ZAULT_MLDSA65_SK_LEN + // ML-DSA keys
@@ -383,6 +389,86 @@ export fn zault_random_bytes(out_ptr: [*]u8, out_len: usize) i32 {
 }
 
 // =============================================================================
+// Direct symmetric encryption (for group messages)
+// =============================================================================
+
+/// Encrypt with ChaCha20-Poly1305 using pre-shared key.
+/// Output: [nonce (12)] [tag (16)] [ciphertext]
+export fn zault_chacha20_encrypt(
+    key_ptr: [*]const u8,
+    key_len: usize,
+    plaintext_ptr: [*]const u8,
+    plaintext_len: usize,
+    ciphertext_out: [*]u8,
+    ciphertext_out_len: usize,
+) i32 {
+    if (key_len != ZAULT_CHACHA20_KEY_LEN) return ZAULT_ERR_INVALID_ARG;
+
+    const required_len = plaintext_len + ZAULT_CHACHA20_OVERHEAD;
+    if (ciphertext_out_len < required_len) return ZAULT_ERR_INVALID_ARG;
+
+    const key: *const [32]u8 = @ptrCast(key_ptr);
+    const plaintext = plaintext_ptr[0..plaintext_len];
+
+    // Generate nonce
+    var nonce: [12]u8 = undefined;
+    crypto.random.bytes(&nonce);
+
+    // Layout: [nonce (12)] [tag (16)] [ciphertext]
+    @memcpy(ciphertext_out[0..12], &nonce);
+
+    crypto.ChaCha20Poly1305.encrypt(
+        ciphertext_out[28..][0..plaintext_len],
+        ciphertext_out[12..][0..16],
+        plaintext,
+        &[_]u8{},
+        nonce,
+        key.*,
+    );
+
+    return ZAULT_OK;
+}
+
+/// Decrypt data encrypted with zault_chacha20_encrypt().
+export fn zault_chacha20_decrypt(
+    key_ptr: [*]const u8,
+    key_len: usize,
+    ciphertext_ptr: [*]const u8,
+    ciphertext_len: usize,
+    plaintext_out: [*]u8,
+    plaintext_out_len: usize,
+) i32 {
+    if (key_len != ZAULT_CHACHA20_KEY_LEN) return ZAULT_ERR_INVALID_ARG;
+    if (ciphertext_len < ZAULT_CHACHA20_OVERHEAD) return ZAULT_ERR_INVALID_ARG;
+
+    const encrypted_len = ciphertext_len - ZAULT_CHACHA20_OVERHEAD;
+    if (plaintext_out_len < encrypted_len) return ZAULT_ERR_INVALID_ARG;
+
+    const key: *const [32]u8 = @ptrCast(key_ptr);
+
+    // Extract nonce and tag
+    var nonce: [12]u8 = undefined;
+    @memcpy(&nonce, ciphertext_ptr[0..12]);
+
+    var tag: [16]u8 = undefined;
+    @memcpy(&tag, ciphertext_ptr[12..28]);
+
+    // Decrypt
+    crypto.ChaCha20Poly1305.decrypt(
+        plaintext_out[0..encrypted_len],
+        ciphertext_ptr[28..][0..encrypted_len],
+        tag,
+        &[_]u8{},
+        nonce,
+        key.*,
+    ) catch {
+        return ZAULT_ERR_AUTH_FAILED;
+    };
+
+    return ZAULT_OK;
+}
+
+// =============================================================================
 // Utilities
 // =============================================================================
 
@@ -414,6 +500,16 @@ export fn zault_get_kem_pk_len() usize {
 /// Get DSA public key size.
 export fn zault_get_dsa_pk_len() usize {
     return ZAULT_MLDSA65_PK_LEN;
+}
+
+/// Get ChaCha20 overhead.
+export fn zault_get_chacha20_overhead() usize {
+    return ZAULT_CHACHA20_OVERHEAD;
+}
+
+/// Get ChaCha20 key length.
+export fn zault_get_chacha20_key_len() usize {
+    return ZAULT_CHACHA20_KEY_LEN;
 }
 
 /// Get version string.
@@ -465,4 +561,5 @@ fn serializeIdentity(identity: *const Identity, out: [*]u8) void {
     std.mem.writeInt(i64, &ts_bytes, identity.created_at, .little);
     @memcpy(out[pos..][0..8], &ts_bytes);
 }
+
 

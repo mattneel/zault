@@ -804,6 +804,114 @@ export fn zault_parse_public_identity_dsa_pk(
 }
 
 // =============================================================================
+// Direct symmetric encryption (for group messages)
+// =============================================================================
+
+/// ChaCha20-Poly1305 tag length
+pub const ZAULT_CHACHA20_TAG_LEN: usize = 16;
+
+/// ChaCha20-Poly1305 nonce length
+pub const ZAULT_CHACHA20_NONCE_LEN: usize = 12;
+
+/// ChaCha20-Poly1305 key length
+pub const ZAULT_CHACHA20_KEY_LEN: usize = 32;
+
+/// Encrypt data with ChaCha20-Poly1305 using a pre-shared key.
+/// This is for group messages where the group key is already distributed.
+/// Output: [nonce (12)] [tag (16)] [ciphertext]
+/// Total overhead: 28 bytes
+export fn zault_chacha20_encrypt(
+    key_ptr: ?[*]const u8,
+    key_len: usize,
+    plaintext_ptr: ?[*]const u8,
+    plaintext_len: usize,
+    ciphertext_out: ?[*]u8,
+    ciphertext_out_len: usize,
+    ciphertext_len_out: ?*usize,
+) c_int {
+    if (key_ptr == null or key_len != ZAULT_CHACHA20_KEY_LEN) return ZAULT_ERR_INVALID_ARG;
+
+    const overhead = ZAULT_CHACHA20_NONCE_LEN + ZAULT_CHACHA20_TAG_LEN;
+    const required_len = plaintext_len + overhead;
+
+    if (ciphertext_out == null or ciphertext_out_len < required_len) return ZAULT_ERR_INVALID_ARG;
+
+    const key: *const [32]u8 = @ptrCast(key_ptr.?);
+    const plaintext = if (plaintext_ptr) |p| p[0..plaintext_len] else &[_]u8{};
+    const out = ciphertext_out.?;
+
+    // Generate random nonce
+    var nonce: [12]u8 = undefined;
+    crypto.random.bytes(&nonce);
+
+    // Layout: [nonce (12)] [tag (16)] [ciphertext]
+    @memcpy(out[0..12], &nonce);
+
+    // Encrypt
+    crypto.ChaCha20Poly1305.encrypt(
+        out[28..][0..plaintext_len],
+        out[12..][0..16],
+        plaintext,
+        &[_]u8{},
+        nonce,
+        key.*,
+    );
+
+    if (ciphertext_len_out) |len_out| {
+        len_out.* = required_len;
+    }
+
+    return ZAULT_OK;
+}
+
+/// Decrypt data encrypted with zault_chacha20_encrypt().
+export fn zault_chacha20_decrypt(
+    key_ptr: ?[*]const u8,
+    key_len: usize,
+    ciphertext_ptr: ?[*]const u8,
+    ciphertext_len: usize,
+    plaintext_out: ?[*]u8,
+    plaintext_out_len: usize,
+    plaintext_len_out: ?*usize,
+) c_int {
+    if (key_ptr == null or key_len != ZAULT_CHACHA20_KEY_LEN) return ZAULT_ERR_INVALID_ARG;
+
+    const overhead = ZAULT_CHACHA20_NONCE_LEN + ZAULT_CHACHA20_TAG_LEN;
+    if (ciphertext_ptr == null or ciphertext_len < overhead) return ZAULT_ERR_INVALID_ARG;
+
+    const encrypted_len = ciphertext_len - overhead;
+    if (plaintext_out == null or plaintext_out_len < encrypted_len) return ZAULT_ERR_INVALID_ARG;
+
+    const key: *const [32]u8 = @ptrCast(key_ptr.?);
+    const input = ciphertext_ptr.?;
+
+    // Extract nonce and tag
+    var nonce: [12]u8 = undefined;
+    @memcpy(&nonce, input[0..12]);
+
+    var tag: [16]u8 = undefined;
+    @memcpy(&tag, input[12..28]);
+
+    // Decrypt
+    crypto.ChaCha20Poly1305.decrypt(
+        plaintext_out.?[0..encrypted_len],
+        input[28..][0..encrypted_len],
+        tag,
+        &[_]u8{},
+        nonce,
+        key.*,
+    ) catch {
+        return ZAULT_ERR_AUTH_FAILED;
+    };
+
+    if (plaintext_len_out) |len_out| {
+        len_out.* = encrypted_len;
+    }
+
+    return ZAULT_OK;
+}
+
+// =============================================================================
 // Error strings
 // =============================================================================
 
@@ -1038,5 +1146,67 @@ test "ffi error string" {
     try std.testing.expectEqualStrings("Invalid argument", std.mem.span(zault_error_string(ZAULT_ERR_INVALID_ARG)));
     try std.testing.expectEqualStrings("Authentication failed", std.mem.span(zault_error_string(ZAULT_ERR_AUTH_FAILED)));
     try std.testing.expectEqualStrings("Unknown error", std.mem.span(zault_error_string(-999)));
+}
+
+test "ffi chacha20 encrypt/decrypt round-trip" {
+    // Generate random key
+    var key: [32]u8 = undefined;
+    crypto.random.bytes(&key);
+
+    const plaintext = "Hello, group chat!";
+    const overhead = ZAULT_CHACHA20_NONCE_LEN + ZAULT_CHACHA20_TAG_LEN;
+    var ciphertext: [plaintext.len + overhead]u8 = undefined;
+    var ct_len: usize = undefined;
+
+    // Encrypt
+    const enc_result = zault_chacha20_encrypt(
+        &key,
+        key.len,
+        plaintext.ptr,
+        plaintext.len,
+        &ciphertext,
+        ciphertext.len,
+        &ct_len,
+    );
+    try std.testing.expectEqual(ZAULT_OK, enc_result);
+    try std.testing.expectEqual(plaintext.len + overhead, ct_len);
+
+    // Decrypt
+    var decrypted: [plaintext.len]u8 = undefined;
+    var dec_len: usize = undefined;
+
+    const dec_result = zault_chacha20_decrypt(
+        &key,
+        key.len,
+        &ciphertext,
+        ct_len,
+        &decrypted,
+        decrypted.len,
+        &dec_len,
+    );
+    try std.testing.expectEqual(ZAULT_OK, dec_result);
+    try std.testing.expectEqual(plaintext.len, dec_len);
+    try std.testing.expectEqualStrings(plaintext, &decrypted);
+}
+
+test "ffi chacha20 tamper detection" {
+    var key: [32]u8 = undefined;
+    crypto.random.bytes(&key);
+
+    const plaintext = "Sensitive data";
+    const overhead = ZAULT_CHACHA20_NONCE_LEN + ZAULT_CHACHA20_TAG_LEN;
+    var ciphertext: [plaintext.len + overhead]u8 = undefined;
+    var ct_len: usize = undefined;
+
+    _ = zault_chacha20_encrypt(&key, key.len, plaintext.ptr, plaintext.len, &ciphertext, ciphertext.len, &ct_len);
+
+    // Tamper with ciphertext
+    ciphertext[30] ^= 0xFF;
+
+    var decrypted: [plaintext.len]u8 = undefined;
+    var dec_len: usize = undefined;
+
+    const dec_result = zault_chacha20_decrypt(&key, key.len, &ciphertext, ct_len, &decrypted, decrypted.len, &dec_len);
+    try std.testing.expectEqual(ZAULT_ERR_AUTH_FAILED, dec_result);
 }
 

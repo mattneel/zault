@@ -98,6 +98,18 @@ extern "C" {
 /** Message encryption overhead: ML-KEM ciphertext + nonce + tag */
 #define ZAULT_MSG_OVERHEAD      1116  /* 1088 + 12 + 16 */
 
+/** ChaCha20-Poly1305 overhead: nonce + tag */
+#define ZAULT_CHACHA20_OVERHEAD 28    /* 12 + 16 */
+
+/** ChaCha20-Poly1305 key length */
+#define ZAULT_CHACHA20_KEY_LEN  32
+
+/** ChaCha20-Poly1305 nonce length */
+#define ZAULT_CHACHA20_NONCE_LEN 12
+
+/** ChaCha20-Poly1305 tag length */
+#define ZAULT_CHACHA20_TAG_LEN  16
+
 /** Serialized public identity length (both public keys) */
 #define ZAULT_PUBLIC_IDENTITY_LEN  3136  /* 1952 + 1184 */
 
@@ -573,6 +585,60 @@ int zault_parse_public_identity_dsa_pk(
     size_t serialized_len,
     uint8_t* dsa_pk_out,
     size_t dsa_pk_out_len
+);
+
+/* ============================================================================
+ * Direct Symmetric Encryption (for group messages)
+ * ============================================================================ */
+
+/**
+ * Encrypt data with ChaCha20-Poly1305 using a pre-shared key.
+ *
+ * Use this for group messages where the group key has already been
+ * distributed via ML-KEM. Avoids the 1088-byte ML-KEM overhead per message.
+ *
+ * Output format: [nonce (12)] [tag (16)] [ciphertext]
+ * Total overhead: ZAULT_CHACHA20_OVERHEAD (28 bytes)
+ *
+ * @param key                 32-byte symmetric key
+ * @param key_len             Must be ZAULT_CHACHA20_KEY_LEN
+ * @param plaintext           Data to encrypt
+ * @param plaintext_len       Data length
+ * @param ciphertext_out      Buffer for output (must be >= plaintext_len + ZAULT_CHACHA20_OVERHEAD)
+ * @param ciphertext_out_len  Buffer size
+ * @param ciphertext_len_out  Receives actual ciphertext length
+ * @return ZAULT_OK on success, error code otherwise
+ */
+int zault_chacha20_encrypt(
+    const uint8_t* key,
+    size_t key_len,
+    const uint8_t* plaintext,
+    size_t plaintext_len,
+    uint8_t* ciphertext_out,
+    size_t ciphertext_out_len,
+    size_t* ciphertext_len_out
+);
+
+/**
+ * Decrypt data encrypted with zault_chacha20_encrypt().
+ *
+ * @param key                32-byte symmetric key
+ * @param key_len            Must be ZAULT_CHACHA20_KEY_LEN
+ * @param ciphertext         Data from zault_chacha20_encrypt()
+ * @param ciphertext_len     Ciphertext length
+ * @param plaintext_out      Buffer for decrypted output
+ * @param plaintext_out_len  Buffer size (must be >= ciphertext_len - ZAULT_CHACHA20_OVERHEAD)
+ * @param plaintext_len_out  Receives actual plaintext length
+ * @return ZAULT_OK on success, ZAULT_ERR_AUTH_FAILED if tampered
+ */
+int zault_chacha20_decrypt(
+    const uint8_t* key,
+    size_t key_len,
+    const uint8_t* ciphertext,
+    size_t ciphertext_len,
+    uint8_t* plaintext_out,
+    size_t plaintext_out_len,
+    size_t* plaintext_len_out
 );
 
 /* ============================================================================

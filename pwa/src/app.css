@@ -1,0 +1,74 @@
+@import "tailwindcss";
+@plugin "daisyui" {
+  themes: all;
+}
+
+/* Dynamic color scheme based on theme */
+[data-theme="dark"],
+[data-theme="night"],
+[data-theme="dracula"],
+[data-theme="synthwave"],
+[data-theme="halloween"],
+[data-theme="forest"],
+[data-theme="black"],
+[data-theme="luxury"],
+[data-theme="business"],
+[data-theme="coffee"],
+[data-theme="dim"],
+[data-theme="sunset"],
+[data-theme="abyss"],
+[data-theme="aqua"] {
+  color-scheme: dark;
+}
+
+[data-theme="light"],
+[data-theme="cupcake"],
+[data-theme="bumblebee"],
+[data-theme="emerald"],
+[data-theme="corporate"],
+[data-theme="retro"],
+[data-theme="cyberpunk"],
+[data-theme="valentine"],
+[data-theme="garden"],
+[data-theme="lofi"],
+[data-theme="pastel"],
+[data-theme="fantasy"],
+[data-theme="wireframe"],
+[data-theme="cmyk"],
+[data-theme="autumn"],
+[data-theme="acid"],
+[data-theme="lemonade"],
+[data-theme="winter"],
+[data-theme="nord"],
+[data-theme="caramellatte"],
+[data-theme="silk"] {
+  color-scheme: light;
+}
+
+html {
+  background: oklch(var(--b1));
+}
+
+body {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  min-height: 100dvh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Clean scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: oklch(var(--b3));
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: oklch(var(--bc) / 0.3);
+}
