@@ -97,32 +97,40 @@ pub fn build(b: *std.Build) void {
     // libzault - C FFI shared/static library
     // =========================================================================
 
+    // Create FFI module
+    const ffi_mod_shared = b.createModule(.{
+        .root_source_file = b.path("src/ffi.zig"),
+        .target = target,
+        .optimize = optimize,
+        .imports = &.{
+            .{ .name = "zault", .module = mod },
+        },
+    });
+
     // Shared library (.so / .dylib / .dll)
-    const libzault_shared = b.addSharedLibrary(.{
+    const libzault_shared = b.addLibrary(.{
+        .linkage = .dynamic,
         .name = "zault",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("src/ffi.zig"),
-            .target = target,
-            .optimize = optimize,
-            .imports = &.{
-                .{ .name = "root", .module = mod },
-            },
-        }),
+        .root_module = ffi_mod_shared,
     });
     libzault_shared.linkLibC();
     b.installArtifact(libzault_shared);
 
+    // Create separate module for static lib (can't reuse modules)
+    const ffi_mod_static = b.createModule(.{
+        .root_source_file = b.path("src/ffi.zig"),
+        .target = target,
+        .optimize = optimize,
+        .imports = &.{
+            .{ .name = "zault", .module = mod },
+        },
+    });
+
     // Static library (.a / .lib)
-    const libzault_static = b.addStaticLibrary(.{
-        .name = "zault",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("src/ffi.zig"),
-            .target = target,
-            .optimize = optimize,
-            .imports = &.{
-                .{ .name = "root", .module = mod },
-            },
-        }),
+    const libzault_static = b.addLibrary(.{
+        .linkage = .static,
+        .name = "zault_static",
+        .root_module = ffi_mod_static,
     });
     libzault_static.linkLibC();
     b.installArtifact(libzault_static);
@@ -188,7 +196,7 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("src/ffi.zig"),
         .target = target,
         .imports = &.{
-            .{ .name = "root", .module = mod },
+            .{ .name = "zault", .module = mod },
         },
     });
     const ffi_tests = b.addTest(.{

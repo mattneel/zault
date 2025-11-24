@@ -212,7 +212,36 @@ $ zault get 8578287e... -o output.pdf
 - **[FAQ](https://mattneel.github.io/zault/faq.html)**
 ## 🧪 Development & Testing
 
-- `zig test src/root.zig --summary fail` – includes Zig's built-in fuzz harnesses (block serialization/CLI parsing) plus NIST/BoringSSL KAT coverage for ML-DSA-65, ML-KEM-768, ChaCha20-Poly1305, SHA3-256, and HKDF-SHA3-256.
+- `zig build test` – runs all tests including FFI, fuzz harnesses, and NIST KATs
+- `zig build` – builds CLI, libzault.so, libzault_static.a, and installs `include/zault.h`
+
+## 📦 libzault C FFI
+
+Embed Zault in C/C++ applications:
+
+```c
+#include <zault.h>
+
+// Initialize vault
+ZaultVault* vault = zault_vault_init("./my-vault", 10);
+
+// Add encrypted file
+uint8_t hash[ZAULT_HASH_LEN];
+zault_vault_add_file(vault, "secret.pdf", 10, hash, sizeof(hash));
+
+// Create share for recipient
+uint8_t token[4096];
+size_t token_len;
+zault_vault_create_share(vault, hash, 32, recipient_pk, 1184,
+                         expires_at, token, sizeof(token), &token_len);
+
+zault_vault_destroy(vault);
+```
+
+Build outputs:
+- `zig-out/lib/libzault.so` – shared library
+- `zig-out/lib/libzault_static.a` – static library
+- `zig-out/include/zault.h` – C header
 
 --- 
 
