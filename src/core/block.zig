@@ -499,3 +499,41 @@ test "block serialization round-trip" {
     try std.testing.expectEqualSlices(u8, &block.prev_hash, &deserialized.prev_hash);
     try std.testing.expectEqualSlices(u8, &block.hash, &deserialized.hash);
 }
+
+const max_fuzz_block_len = 4096;
+
+test "fuzz block deserialize round-trip" {
+    return std.testing.fuzz({}, fuzzBlockDeserializeRoundTrip, .{});
+}
+
+fn fuzzBlockDeserializeRoundTrip(_: void, bytes: []const u8) !void {
+    if (bytes.len == 0 or bytes.len > max_fuzz_block_len) return;
+
+    const allocator = std.testing.allocator;
+
+    const block = Block.deserialize(bytes, allocator) catch |err| switch (err) {
+        error.InvalidBlock => return,
+        error.OutOfMemory => return,
+        else => return err,
+    };
+    defer allocator.free(block.data);
+
+    const serialized = block.serialize(allocator) catch |err| switch (err) {
+        error.OutOfMemory => return,
+        else => return err,
+    };
+    defer allocator.free(serialized);
+
+    const round_trip = Block.deserialize(serialized, allocator) catch |err| switch (err) {
+        error.OutOfMemory => return,
+        else => return err,
+    };
+    defer allocator.free(round_trip.data);
+
+    try std.testing.expectEqual(block.version, round_trip.version);
+    try std.testing.expectEqual(block.block_type, round_trip.block_type);
+    try std.testing.expectEqual(block.timestamp, round_trip.timestamp);
+    try std.testing.expectEqualSlices(u8, &block.author, &round_trip.author);
+    try std.testing.expectEqualSlices(u8, &block.nonce, &round_trip.nonce);
+    try std.testing.expectEqualSlices(u8, &block.prev_hash, &round_trip.prev_hash);
+}

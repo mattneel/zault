@@ -4,7 +4,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Zig](https://img.shields.io/badge/Zig-0.16.0+-orange.svg)](https://ziglang.org)
-[![Tests](https://img.shields.io/badge/Tests-29%2F29-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/Tests-34%2F34-brightgreen.svg)]()
 [![Release](https://img.shields.io/badge/Release-v0.2.0-blue.svg)](https://github.com/mattneel/zault/releases/tag/v0.2.0)
 
 ```bash
@@ -177,7 +177,7 @@ $ zault get 8578287e... -o output.pdf
 ## ⚠️ Alpha Status - v0.2.0
 
 **What's Working:**
-- ✅ Zero-knowledge encryption (29/29 tests)
+- ✅ Zero-knowledge encryption (34/34 tests)
 - ✅ Post-quantum crypto (ML-DSA-65, ML-KEM-768)
 - ✅ File sharing (offline workflow)
 - ✅ Professional CLI
@@ -210,8 +210,11 @@ $ zault get 8578287e... -o output.pdf
 - **[CLI Reference](https://mattneel.github.io/zault/cli-reference.html)**
 - **[Security Model](https://mattneel.github.io/zault/security-model.html)**
 - **[FAQ](https://mattneel.github.io/zault/faq.html)**
+## 🧪 Development & Testing
 
----
+- `zig test src/root.zig --summary fail` – includes Zig's built-in fuzz harnesses (block serialization/CLI parsing) plus NIST/BoringSSL KAT coverage for ML-DSA-65, ML-KEM-768, ChaCha20-Poly1305, SHA3-256, and HKDF-SHA3-256.
+
+--- 
 
 **Built with ⚡ Zig • Protected by 🔒 post-quantum crypto • Shared with 🤝 ML-KEM-768**
 

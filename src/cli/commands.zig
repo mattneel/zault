@@ -382,6 +382,58 @@ fn cmdList(allocator: std.mem.Allocator, iter: *std.process.ArgIterator, vault_p
     }
 }
 
+const max_fuzz_cli_len = 256;
+const max_fuzz_cli_args = 12;
+
+test "fuzz CLI parser" {
+    return std.testing.fuzz({}, fuzzCliParser, .{});
+}
+
+fn fuzzCliParser(_: void, raw: []const u8) !void {
+    if (raw.len == 0 or raw.len > max_fuzz_cli_len) return;
+
+    var tokens: [max_fuzz_cli_args][]const u8 = undefined;
+    var count: usize = 0;
+    var start: usize = 0;
+    var idx: usize = 0;
+
+    while (idx < raw.len and count < tokens.len) : (idx += 1) {
+        switch (raw[idx]) {
+            0, '\n', ' ', '\t' => {
+                if (idx > start) {
+                    tokens[count] = raw[start..idx];
+                    count += 1;
+                }
+                start = idx + 1;
+            },
+            else => {},
+        }
+    }
+
+    if (count < tokens.len and start < raw.len) {
+        tokens[count] = raw[start..];
+        count += 1;
+    }
+
+    if (count == 0) return;
+
+    var iter = clap.args.SliceIterator{ .args = tokens[0..count] };
+    var diag = clap.Diagnostic{};
+    var res = clap.parseEx(clap.Help, &main_params, main_parsers, &iter, .{
+        .diagnostic = &diag,
+        .allocator = std.testing.allocator,
+        .terminating_positional = 0,
+    }) catch return;
+    defer res.deinit();
+
+    // Exercise flag handling paths
+    if (res.args.help != 0) return;
+    if (res.args.version != 0) return;
+    if (res.positionals.len > 0) {
+        _ = res.positionals[0];
+    }
+}
+
 // ============================================================================
 // Subcommand: verify
 // ============================================================================
