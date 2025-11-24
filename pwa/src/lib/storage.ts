@@ -15,10 +15,12 @@ export interface Contact {
 }
 
 // Messages stored with encrypted content
+// ALL messages are stored encrypted - no plaintext anywhere
 export interface StoredMessage {
   id: string;
   contactId: string;
-  ciphertext: string; // base64 encoded encrypted content
+  ciphertext: string; // base64 encoded, encrypted to RECIPIENT (for sync/sending)
+  selfCiphertext?: string; // base64 encoded, encrypted to SELF (for outgoing messages display)
   timestamp: number;
   incoming: boolean;
   status: "pending" | "sent" | "delivered" | "read";

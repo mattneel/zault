@@ -9,7 +9,7 @@ import {
   type Contact,
   type StoredMessage,
 } from "~/lib/storage";
-import { encryptMessage, decryptMessage, getPublicIdentity, getShortId, toBase64Url, fromBase64Url } from "~/lib/crypto";
+import { encryptMessage, encryptToSelf, decryptMessage, getPublicIdentity, getShortId, toBase64Url, fromBase64Url } from "~/lib/crypto";
 import { sendMessage, onMessage, onSync, isP2PReady, isPeerOnline, type P2PMessage } from "~/lib/p2p";
 
 interface DisplayMessage {
@@ -43,18 +43,29 @@ export default function Chat() {
     return storedMessages()
       .map((msg): DisplayMessage | null => {
         try {
-          // Outgoing messages are stored as plaintext locally
           if (!msg.incoming) {
+            // Outgoing messages: decrypt selfCiphertext (encrypted to our own key)
+            if (!msg.selfCiphertext) {
+              return {
+                id: msg.id,
+                content: "[No encrypted copy]",
+                timestamp: msg.timestamp,
+                incoming: false,
+                status: msg.status,
+              };
+            }
+            const selfCiphertext = fromBase64Url(msg.selfCiphertext);
+            const plaintext = decryptMessage(id, selfCiphertext);
             return {
               id: msg.id,
-              content: msg.ciphertext, // This is actually plaintext for outgoing
+              content: plaintext,
               timestamp: msg.timestamp,
               incoming: false,
               status: msg.status,
             };
           }
           
-          // Incoming messages need decryption
+          // Incoming messages: decrypt the ciphertext (encrypted to our key)
           const ciphertext = fromBase64Url(msg.ciphertext);
           const plaintext = decryptMessage(id, ciphertext);
           return {
@@ -141,15 +152,22 @@ export default function Chat() {
     setSending(true);
 
     try {
+      // Encrypt to recipient (for sending/sync)
       const ciphertext = encryptMessage(contact_.publicIdentity, text);
       const ciphertextB64 = toBase64Url(ciphertext);
+      
+      // Encrypt to self (for local display) - NO PLAINTEXT STORED
+      const selfCiphertext = encryptToSelf(id, text);
+      const selfCiphertextB64 = toBase64Url(selfCiphertext);
+      
       const messageId = crypto.randomUUID();
       const timestamp = Date.now();
 
       const storedMsg: StoredMessage = {
         id: messageId,
         contactId: contact_.id,
-        ciphertext: text,
+        ciphertext: ciphertextB64,       // Encrypted to recipient (for sync)
+        selfCiphertext: selfCiphertextB64, // Encrypted to self (for display)
         timestamp,
         incoming: false,
         status: "pending",

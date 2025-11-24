@@ -91,6 +91,18 @@ export function encryptMessage(
 }
 
 /**
+ * Helper: Encrypt message to self (for storing outgoing messages encrypted)
+ */
+export function encryptToSelf(
+  identity: Uint8Array,
+  plaintext: string
+): Uint8Array {
+  const publicIdentity = getZault().serializePublicIdentity(identity);
+  const kemPk = getZault().parseKemPublicKey(publicIdentity);
+  return getZault().encryptMessage(kemPk, plaintext);
+}
+
+/**
  * Helper: Decrypt message
  */
 export function decryptMessage(
