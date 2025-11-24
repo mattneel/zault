@@ -7,8 +7,18 @@ import { Page, BrowserContext, Browser, expect } from "@playwright/test";
  * Wait for WASM to load and app to be ready
  */
 export async function waitForAppReady(page: Page, timeout = 30000) {
-  // Wait for the app to hydrate - look for the Zault title in navbar
-  await page.waitForSelector('text=Zault', { timeout });
+  // Wait for the app to hydrate - look for common elements
+  // On home page: "Zault" title
+  // On chat page: navbar with back button
+  // On any page: the base-100 background
+  await page.waitForFunction(() => {
+    // Check if we have any hydrated content
+    const hasNavbar = document.querySelector('.navbar');
+    const hasZault = document.body.innerText.includes('Zault');
+    const hasChat = document.querySelector('.chat-bubble') || document.querySelector('input[placeholder="Message"]');
+    const hasContent = document.querySelector('.bg-base-100');
+    return hasNavbar || hasZault || hasChat || hasContent;
+  }, { timeout });
   
   // Wait for loading spinner to disappear if present
   await page.waitForFunction(() => {

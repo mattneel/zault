@@ -1,11 +1,24 @@
 /**
  * CRDT-based message sync for Zault Chat
  * 
- * Messages are stored and synced ENCRYPTED.
- * Uses vector clocks to track what each peer has seen.
+ * NOTE: Message sync is currently DISABLED for E2E encrypted chats.
+ * 
+ * The fundamental problem with syncing E2E messages:
+ * - Each message is encrypted to ONE recipient's public key
+ * - The sender stores plaintext locally (for display)
+ * - The recipient stores ciphertext (encrypted to them)
+ * - You can't "sync" a message encrypted to Alice to Bob - Bob can't decrypt it
+ * 
+ * Future solutions:
+ * 1. Store the ciphertext on sender side too (doubles storage)
+ * 2. Use a shared secret between peers (changes the crypto model)
+ * 3. Server-side message queue (messages wait until recipient is online)
+ * 
+ * For now, messages are delivered in real-time only. If recipient is offline,
+ * they miss the message. This is a known limitation of the current design.
  */
 
-import { getMessages, addMessage, type StoredMessage } from "./storage";
+import { getMessages, type StoredMessage } from "./storage";
 
 // Vector clock: sender -> last timestamp
 export interface VectorClock {
@@ -51,56 +64,29 @@ export async function buildVectorClock(contactId: string): Promise<VectorClock> 
 
 /**
  * Get messages that peer is missing based on their vector clock
- * Returns the full encrypted messages for sync
+ * 
+ * DISABLED: E2E encrypted messages can't be synced between peers.
+ * Each message is encrypted to one recipient only.
  */
 export async function getMissingMessages(
   contactId: string,
   peerClock: VectorClock
 ): Promise<StoredMessage[]> {
-  const messages = await getMessages(contactId);
-  const missing: StoredMessage[] = [];
-  
-  for (const msg of messages) {
-    // From our perspective: our outgoing = peer's incoming
-    // So "me" in our clock = "them" in peer's clock
-    const peerSender = msg.incoming ? "me" : "them";
-    const peerLastSeen = peerClock[peerSender] || 0;
-    
-    if (msg.timestamp > peerLastSeen) {
-      missing.push(msg);
-    }
-  }
-  
-  return missing;
+  // Sync is disabled - return empty array
+  return [];
 }
 
 /**
  * Merge incoming messages with local state
- * Messages come with flipped incoming flag (their outgoing = our incoming)
+ * 
+ * DISABLED: E2E encrypted messages can't be synced between peers.
  */
 export async function mergeMessages(
   contactId: string,
   incoming: StoredMessage[]
 ): Promise<StoredMessage[]> {
-  const existing = await getMessages(contactId);
-  const existingIds = new Set(existing.map((m) => m.id));
-  const added: StoredMessage[] = [];
-  
-  for (const msg of incoming) {
-    if (existingIds.has(msg.id)) continue;
-    
-    // Flip the incoming flag - their perspective is opposite of ours
-    const flippedMsg: StoredMessage = {
-      ...msg,
-      contactId,
-      incoming: !msg.incoming,
-    };
-    
-    await addMessage(flippedMsg);
-    added.push(flippedMsg);
-  }
-  
-  return added;
+  // Sync is disabled - nothing to merge
+  return [];
 }
 
 /**
