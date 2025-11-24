@@ -290,9 +290,9 @@ function handleServerMessage(data: any, zaultId: string, resolveInit?: () => voi
 }
 
 /**
- * Request sync with a peer
+ * Request sync with a peer (exported for manual sync triggers)
  */
-async function requestSyncWithPeer(contactId: string): Promise<void> {
+export async function requestSyncWithPeer(contactId: string): Promise<void> {
   if (!ws || ws.readyState !== WebSocket.OPEN) return;
   
   const syncReq = await createSyncRequest(contactId);

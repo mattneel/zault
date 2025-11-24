@@ -10,7 +10,7 @@ import {
   type StoredMessage,
 } from "~/lib/storage";
 import { encryptMessage, encryptToSelf, decryptMessage, getPublicIdentity, getShortId, toBase64Url, fromBase64Url } from "~/lib/crypto";
-import { sendMessage, onMessage, onSync, isP2PReady, isPeerOnline, type P2PMessage } from "~/lib/p2p";
+import { sendMessage, onMessage, onSync, isP2PReady, isPeerOnline, requestSyncWithPeer, type P2PMessage } from "~/lib/p2p";
 
 interface DisplayMessage {
   id: string;
@@ -131,6 +131,12 @@ export default function Chat() {
       const allMsgs = await getMessages(contactId);
       setStoredMessages(allMsgs);
     });
+
+    // Trigger sync with this contact when entering the chat
+    // This fetches any messages we missed while not on this page
+    if (isP2PReady() && params.id) {
+      requestSyncWithPeer(params.id);
+    }
   });
 
   onCleanup(() => {
