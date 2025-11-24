@@ -89,6 +89,18 @@ extern "C" {
 /** ML-KEM-768 secret key length (2400 bytes) */
 #define ZAULT_MLKEM768_SK_LEN   2400
 
+/** ML-KEM-768 ciphertext length (1088 bytes) */
+#define ZAULT_MLKEM768_CT_LEN   1088
+
+/** ML-DSA-65 signature length (3309 bytes) */
+#define ZAULT_SIGNATURE_LEN     3309
+
+/** Message encryption overhead: ML-KEM ciphertext + nonce + tag */
+#define ZAULT_MSG_OVERHEAD      1116  /* 1088 + 12 + 16 */
+
+/** Serialized public identity length (both public keys) */
+#define ZAULT_PUBLIC_IDENTITY_LEN  3136  /* 1952 + 1184 */
+
 /* ============================================================================
  * Opaque Types
  * ============================================================================ */
@@ -408,6 +420,172 @@ int zault_sha3_256(
  * @return ZAULT_OK on success, error code otherwise
  */
 int zault_random_bytes(uint8_t* out, size_t out_len);
+
+/* ============================================================================
+ * Message Encryption (Memory-only, no filesystem)
+ * ============================================================================ */
+
+/**
+ * Encrypt a message to a recipient using ML-KEM-768 + ChaCha20-Poly1305.
+ *
+ * Uses post-quantum key encapsulation for forward secrecy.
+ * Output format: [ML-KEM ciphertext (1088)] [nonce (12)] [tag (16)] [encrypted_message]
+ *
+ * @param identity            Sender's identity (for signing, may be NULL for anonymous)
+ * @param recipient_kem_pk    Recipient's ML-KEM-768 public key
+ * @param recipient_pk_len    Must be ZAULT_MLKEM768_PK_LEN
+ * @param plaintext           Message to encrypt (NULL with len=0 for empty)
+ * @param plaintext_len       Message length
+ * @param ciphertext_out      Buffer for encrypted output
+ * @param ciphertext_out_len  Buffer size (must be >= plaintext_len + ZAULT_MSG_OVERHEAD)
+ * @param ciphertext_len_out  Receives actual ciphertext length
+ * @return ZAULT_OK on success, error code otherwise
+ */
+int zault_encrypt_message(
+    const ZaultIdentity* identity,  /* NULL for anonymous */
+    const uint8_t* recipient_kem_pk,
+    size_t recipient_pk_len,
+    const uint8_t* plaintext,
+    size_t plaintext_len,
+    uint8_t* ciphertext_out,
+    size_t ciphertext_out_len,
+    size_t* ciphertext_len_out
+);
+
+/**
+ * Decrypt a message encrypted with zault_encrypt_message().
+ *
+ * @param identity            Recipient's identity (contains KEM secret key)
+ * @param ciphertext          Encrypted message from zault_encrypt_message()
+ * @param ciphertext_len      Ciphertext length
+ * @param plaintext_out       Buffer for decrypted output
+ * @param plaintext_out_len   Buffer size (must be >= ciphertext_len - ZAULT_MSG_OVERHEAD)
+ * @param plaintext_len_out   Receives actual plaintext length
+ * @return ZAULT_OK on success, ZAULT_ERR_AUTH_FAILED if tampered/invalid
+ */
+int zault_decrypt_message(
+    const ZaultIdentity* identity,
+    const uint8_t* ciphertext,
+    size_t ciphertext_len,
+    uint8_t* plaintext_out,
+    size_t plaintext_out_len,
+    size_t* plaintext_len_out
+);
+
+/* ============================================================================
+ * Digital Signatures (for message authentication)
+ * ============================================================================ */
+
+/**
+ * Sign arbitrary data with identity's ML-DSA-65 key.
+ *
+ * Use this to authenticate messages, prove authorship, etc.
+ *
+ * @param identity       Signer's identity
+ * @param data           Data to sign (NULL with len=0 for empty)
+ * @param data_len       Data length
+ * @param signature_out  Buffer for signature (must be >= ZAULT_SIGNATURE_LEN)
+ * @param sig_out_len    Buffer size
+ * @return ZAULT_OK on success, error code otherwise
+ */
+int zault_sign(
+    const ZaultIdentity* identity,
+    const uint8_t* data,
+    size_t data_len,
+    uint8_t* signature_out,
+    size_t sig_out_len
+);
+
+/**
+ * Verify a signature against a public key.
+ *
+ * @param public_key     Signer's ML-DSA-65 public key
+ * @param pk_len         Must be ZAULT_MLDSA65_PK_LEN
+ * @param data           Signed data
+ * @param data_len       Data length
+ * @param signature      Signature to verify
+ * @param sig_len        Must be ZAULT_SIGNATURE_LEN
+ * @return ZAULT_OK if valid, ZAULT_ERR_AUTH_FAILED if invalid
+ */
+int zault_verify(
+    const uint8_t* public_key,
+    size_t pk_len,
+    const uint8_t* data,
+    size_t data_len,
+    const uint8_t* signature,
+    size_t sig_len
+);
+
+/* ============================================================================
+ * Identity Serialization (for wire transfer)
+ * ============================================================================ */
+
+/**
+ * Serialize identity's public keys for sharing (e.g., via QR code, link).
+ *
+ * Format: [ML-DSA-65 pk (1952)] [ML-KEM-768 pk (1184)]
+ * Total: ZAULT_PUBLIC_IDENTITY_LEN (3136 bytes)
+ *
+ * @param identity   Identity handle
+ * @param out        Buffer (must be >= ZAULT_PUBLIC_IDENTITY_LEN)
+ * @param out_len    Buffer size
+ * @return ZAULT_OK on success, error code otherwise
+ */
+int zault_identity_serialize_public(
+    const ZaultIdentity* identity,
+    uint8_t* out,
+    size_t out_len
+);
+
+/**
+ * Extract ML-KEM-768 public key from a serialized public identity.
+ *
+ * Use this when you receive someone's public identity and need their
+ * KEM key for encrypting messages to them.
+ *
+ * @param serialized      Serialized public identity from zault_identity_serialize_public()
+ * @param serialized_len  Must be ZAULT_PUBLIC_IDENTITY_LEN
+ * @param kem_pk_out      Buffer for KEM public key (must be >= ZAULT_MLKEM768_PK_LEN)
+ * @param kem_pk_out_len  Buffer size
+ * @return ZAULT_OK on success, error code otherwise
+ */
+int zault_parse_public_identity_kem_pk(
+    const uint8_t* serialized,
+    size_t serialized_len,
+    uint8_t* kem_pk_out,
+    size_t kem_pk_out_len
+);
+
+/**
+ * Extract ML-DSA-65 public key from a serialized public identity.
+ *
+ * Use this when you receive someone's public identity and need their
+ * DSA key for verifying signatures from them.
+ *
+ * @param serialized      Serialized public identity from zault_identity_serialize_public()
+ * @param serialized_len  Must be ZAULT_PUBLIC_IDENTITY_LEN
+ * @param dsa_pk_out      Buffer for DSA public key (must be >= ZAULT_MLDSA65_PK_LEN)
+ * @param dsa_pk_out_len  Buffer size
+ * @return ZAULT_OK on success, error code otherwise
+ */
+int zault_parse_public_identity_dsa_pk(
+    const uint8_t* serialized,
+    size_t serialized_len,
+    uint8_t* dsa_pk_out,
+    size_t dsa_pk_out_len
+);
+
+/* ============================================================================
+ * Error Handling
+ * ============================================================================ */
+
+/**
+ * Get human-readable error message for an error code.
+ *
+ * @param error_code  Error code returned by a zault function
+ * @return Static string describing the error. Do not free.
+ */
+const char* zault_error_string(int error_code);
 
 #ifdef __cplusplus
 }
