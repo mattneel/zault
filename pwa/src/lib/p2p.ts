@@ -330,14 +330,11 @@ async function handleIncomingSyncRequest(from: string, request: { vectorClock: V
  */
 async function handleIncomingSyncResponse(from: string, response: { messages: StoredMessage[], vectorClock: VectorClock }): Promise<void> {
   const added = await handleSyncResponse(from, response.messages);
-  console.log("[P2P] Synced", added.length, "encrypted messages from:", from);
   
   markSynced(from);
   
-  // Notify handlers of new synced messages
-  if (added.length > 0) {
-    syncHandlers.forEach((handler) => handler(from, added));
-  }
+  // Always notify so UI can refresh
+  syncHandlers.forEach((handler) => handler(from, added));
 }
 
 /**

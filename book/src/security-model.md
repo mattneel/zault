@@ -4,29 +4,48 @@ Understanding Zault's security properties, threat model, and guarantees.
 
 ---
 
+## Overview
+
+Zault provides post-quantum end-to-end encryption for:
+
+1. **File Storage** (CLI) - Encrypted vault with content-addressed blocks
+2. **P2P Chat** (PWA) - Real-time encrypted messaging
+3. **Library** (libzault/WASM) - Crypto primitives for your applications
+
+All three share the same cryptographic foundation:
+
+| Algorithm | Purpose | Security Level |
+|-----------|---------|----------------|
+| ML-DSA-65 | Digital signatures | ~192-bit (post-quantum) |
+| ML-KEM-768 | Key encapsulation | ~192-bit (post-quantum) |
+| ChaCha20-Poly1305 | Symmetric encryption | 256-bit |
+| SHA3-256 | Hashing | 256-bit |
+
+---
+
 ## Threat Model
 
 ### What Zault Protects Against ✅
 
-#### 1. Malicious Storage Provider
+#### 1. Malicious Server/Storage Provider
 
-**Threat:** Storage provider tries to read your files.
+**Threat:** Server operator tries to read your data.
 
 **Protection:**
-- All content encrypted with ChaCha20-Poly1305
-- All metadata encrypted with vault master key
+- All content encrypted before transmission
 - Server never receives encryption keys
+- Keys generated and stored only on your device
 
-**Result:** Server sees only encrypted gibberish ✅
+**Result:** Server sees only encrypted ciphertext ✅
 
 #### 2. Network Eavesdropping
 
 **Threat:** Attacker intercepts network traffic.
 
 **Protection:**
-- Files encrypted before upload
+- Data encrypted end-to-end
 - Only ciphertext transmitted
-- Future: TLS for server communication
+- TLS for transport (additional layer)
 
 **Result:** Eavesdropper cannot decrypt ✅
 
@@ -36,396 +55,316 @@ Understanding Zault's security properties, threat model, and guarantees.
 
 **Protection:**
 - ML-DSA-65 signatures (quantum-resistant)
+- ML-KEM-768 key exchange (quantum-resistant)
 - ChaCha20-Poly1305 (256-bit, quantum-resistant for symmetric)
-- NIST-standardized post-quantum algorithms
+- NIST-standardized algorithms (FIPS 203, 204)
 
 **Result:** Resistant to known quantum attacks ✅
 
-#### 4. Server Compromise
+#### 4. Message Tampering
 
-**Threat:** Attacker gains full access to storage server.
-
-**Protection:**
-- Encrypted at rest
-- No master keys on server
-- Signatures prevent tampering
-
-**Result:** Attacker gets encrypted blocks only ✅
-
-#### 5. Tampering
-
-**Threat:** Attacker modifies stored blocks.
+**Threat:** Attacker modifies messages in transit.
 
 **Protection:**
-- All blocks signed with ML-DSA-65
-- Content-addressed (SHA3-256 hashes)
-- Signature verification before decryption
+- ChaCha20-Poly1305 authenticated encryption
+- ML-DSA-65 signatures on blocks
+- Tampering detected before decryption
 
 **Result:** Tampering detected immediately ✅
+
+#### 5. Impersonation
+
+**Threat:** Attacker pretends to be someone else.
+
+**Protection:**
+- Identity = ML-DSA-65 + ML-KEM-768 keypairs
+- Messages signed with sender's private key
+- Cannot forge without private key
+
+**Result:** Cryptographic proof of identity ✅
 
 ---
 
 ### What Zault Does NOT Protect Against ❌
 
-#### 1. Malware on Your Device
+#### 1. Compromised Device
 
-**Threat:** Malware on your computer captures keys.
+**Threat:** Malware on your device captures keys.
 
 **Not Protected:**
-- Malware can read `identity.bin`
-- Malware can see plaintext files
-- Malware can log keystrokes
+- Malware can read identity files
+- Malware can see decrypted messages
+- Keyloggers can capture input
 
 **Mitigation:**
 - Keep OS updated
-- Use antivirus
-- Don't run untrusted code
-- Consider hardware security modules (future)
+- Use antivirus software
+- Don't install untrusted software
 
-#### 2. Physical Attacks
+#### 2. Physical Access
 
 **Threat:** Attacker steals your device.
 
 **Not Protected:**
-- `identity.bin` accessible if disk not encrypted
-- Memory dumps may contain keys
-- Cold boot attacks
+- Identity accessible if disk not encrypted
+- Memory may contain keys
 
 **Mitigation:**
-- Use full-disk encryption (LUKS, FileVault, BitLocker)
+- Use full-disk encryption
 - Strong device password
-- Secure boot
-- Consider encrypted identity.bin (future)
+- Remote wipe capability
 
-#### 3. Social Engineering
+#### 3. Key Loss
 
-**Threat:** Attacker tricks you into sharing keys.
-
-**Not Protected:**
-- Zault cannot prevent human error
-- No "undo" for sharing `identity.bin`
-
-**Mitigation:**
-- Never share `identity.bin`
-- Verify recipient identity before sharing files
-- Use share tokens (Phase 2) instead
-
-#### 4. Loss of Private Key
-
-**Threat:** You lose `identity.bin`.
+**Threat:** You lose your identity/private keys.
 
 **Not Protected:**
 - No password recovery
 - No key escrow
-- No way to decrypt vault
+- No way to decrypt old data
 
 **Mitigation:**
-- Multiple backups of `identity.bin`
-- Store backup in safe location
+- Backup identity file
+- Store backup securely
 - Test recovery procedure
-- Consider BIP39 mnemonics (future)
 
-#### 5. Traffic Analysis
+#### 4. Metadata/Traffic Analysis
 
-**Threat:** Attacker analyzes access patterns.
+**Threat:** Attacker analyzes communication patterns.
 
-**Not Protected:**
-- Block sizes visible (approximate file sizes)
-- Access timing visible
-- Upload frequency patterns
+**Visible:**
+- Who communicates with whom (peer IDs)
+- When messages are sent
+- Message sizes
+- Online/offline status
 
-**Mitigation:**
-- Pad blocks to fixed sizes (future)
-- Use Tor/VPN for network privacy
-- Oblivious RAM patterns (future)
-
----
-
-## Security Properties
-
-### Confidentiality ✅
-
-**Content Encryption:**
-- Algorithm: ChaCha20-Poly1305
-- Key length: 256 bits
-- Unique key per file
-- Nonce: 96 bits, random
-
-**Metadata Encryption:**
-- Algorithm: ChaCha20-Poly1305
-- Key: Vault master key (HKDF-derived)
-- Encrypts: filename, size, type, content_key
-
-**Result:** Server cannot read filenames or content.
+**Not Visible:**
+- Message contents
+- Full identities (only short IDs)
 
 ---
 
-### Integrity ✅
+## P2P Chat Security Model
 
-**Digital Signatures:**
-- Algorithm: ML-DSA-65 (NIST FIPS 204)
-- Security level: ~192-bit (post-quantum)
-- Signs: All block data
+### Architecture
 
-**Content Addressing:**
-- Algorithm: SHA3-256
-- Block ID = SHA3-256(block data)
-- Tamper-evident
+```
+Alice                    Server                    Bob
+  │                        │                        │
+  │ ── encrypted msg ────▶ │ ── encrypted msg ────▶ │
+  │                        │                        │
+  │ (Server routes only)   │                        │
+  │ (Cannot decrypt)       │                        │
+```
 
-**Result:** Any modification is immediately detected.
+### What the Server Sees
+
+| Data | Visible? | Notes |
+|------|----------|-------|
+| Message content | ❌ No | Encrypted with ML-KEM-768 |
+| Peer short IDs | ✅ Yes | First 16 chars of pubkey hash |
+| Full identities | ❌ No | Only exchanged peer-to-peer |
+| Online status | ✅ Yes | WebSocket connection state |
+| Message routing | ✅ Yes | Who sends to whom |
+| Message timing | ✅ Yes | When messages sent |
+| Message size | ✅ Yes | Approximate length |
+
+### 1:1 Chat Encryption
+
+```
+1. Alice generates ephemeral shared secret using Bob's ML-KEM-768 public key
+2. Derives symmetric key from shared secret
+3. Encrypts message with ChaCha20-Poly1305
+4. Sends: [KEM ciphertext (1088)] [nonce (12)] [tag (16)] [encrypted message]
+5. Bob decapsulates shared secret using his private key
+6. Decrypts message
+```
+
+**Properties:**
+- Forward secrecy per message (new KEM encapsulation each time)
+- Authentication via ML-KEM binding
+- 1116 bytes overhead per message
+
+### Group Chat Encryption
+
+```
+1. Creator generates random 32-byte group key
+2. Encrypts group key to each member's ML-KEM-768 public key
+3. Distributes encrypted keys
+4. Messages encrypted with ChaCha20-Poly1305 using shared key
+5. On member removal: rotate key, re-encrypt to remaining members
+```
+
+**Properties:**
+- Efficient (28 bytes overhead per message)
+- Key rotation maintains forward secrecy
+- Removed members cannot decrypt new messages
+
+### Offline Sync Security
+
+Messages synced when coming back online:
+
+1. **Stored encrypted** - Only ciphertext in IndexedDB
+2. **Synced encrypted** - Only ciphertext transmitted
+3. **Decrypted at render** - Plaintext only in UI layer
+
+**CRDT sync protocol:**
+- Vector clocks track message history
+- Missing messages requested by ID
+- Only encrypted payloads transferred
 
 ---
 
-### Authenticity ✅
+## File Storage Security Model
 
-**Identity:**
-- ML-DSA-65 keypair per vault
-- Public key in every block's `author` field
-- Cannot forge without private key
+### Two-Block System
 
-**Result:** Provable authorship of all blocks.
+Every file creates two encrypted blocks:
 
----
+**Content Block:**
+- Encrypted file data (ChaCha20-Poly1305)
+- Random per-file key
+- Signed with ML-DSA-65
 
-### Non-Repudiation ✅
+**Metadata Block:**
+- Encrypted filename, size, MIME type
+- Contains content block hash and key
+- Signed with ML-DSA-65
 
-**Signatures are binding:**
-- Cannot deny creating a signed block
-- Cryptographic proof of authorship
-- Audit trail immutable
+**Result:** Server cannot see filenames or content.
 
-**Result:** Perfect for compliance and legal evidence.
+### Share Token Security
 
----
+```
+1. Alice creates share for Bob
+2. File key encrypted with Bob's ML-KEM-768 public key
+3. Share token = [encrypted key] [expiration] [signature]
+4. Bob decapsulates key with his private key
+5. Bob decrypts file
+```
 
-### Forward Secrecy ✅
-
-**Per-File Keys:**
-- Each file has unique encryption key
-- Compromise of one key doesn't affect others
-- Future: Ratcheting keys for share tokens
-
-**Result:** Limited blast radius on key compromise.
+**Properties:**
+- Only intended recipient can decrypt
+- Expiration enforced cryptographically
+- Cannot forge share tokens (ML-DSA signature)
 
 ---
 
 ## Cryptographic Algorithms
 
-### Post-Quantum Algorithms
+### ML-DSA-65 (Digital Signatures)
 
-#### ML-DSA-65 (Digital Signatures)
 - **Standard:** NIST FIPS 204
-- **Security:** ~192-bit (post-quantum)
-- **Key sizes:**
-  - Public: 1,952 bytes
-  - Secret: 4,032 bytes
-  - Signature: 3,309 bytes
-- **Performance:** ~2ms sign/verify
+- **Security:** ~192-bit post-quantum
+- **Key sizes:** Public 1,952 bytes, Secret 4,032 bytes
+- **Signature:** 3,309 bytes
+- **Use:** Block signing, message authentication
 
-**Why ML-DSA:**
-- NIST-standardized (mature)
-- Quantum-resistant (lattice-based)
-- Fast enough for real-time use
+### ML-KEM-768 (Key Encapsulation)
 
-#### ML-KEM-768 (Key Encapsulation)
 - **Standard:** NIST FIPS 203
-- **Security:** ~192-bit (post-quantum)
-- **Status:** Implemented, not yet used
-- **Future:** Share tokens (Phase 2.1)
+- **Security:** ~192-bit post-quantum
+- **Key sizes:** Public 1,184 bytes, Secret 2,400 bytes
+- **Ciphertext:** 1,088 bytes
+- **Use:** 1:1 chat encryption, share tokens
 
-**Why ML-KEM:**
-- NIST-standardized
-- Quantum-resistant (lattice-based)
-- Perfect for asymmetric encryption
+### ChaCha20-Poly1305 (AEAD)
 
----
-
-### Classical Algorithms
-
-#### ChaCha20-Poly1305 (Authenticated Encryption)
 - **Standard:** RFC 8439
 - **Security:** 256-bit
-- **Performance:** 100+ MB/s
-- **Properties:** Authenticated encryption (AEAD)
+- **Overhead:** 28 bytes (12 nonce + 16 tag)
+- **Use:** Symmetric encryption, group chat
 
-**Why ChaCha20:**
-- Fast (software-friendly)
-- Secure (256-bit keys resist quantum attacks)
-- Authenticated (detects tampering)
-- No side-channel attacks
+### SHA3-256 (Hashing)
 
-#### HKDF-SHA3-256 (Key Derivation)
-- **Standard:** RFC 5869 + FIPS 202
-- **Security:** 256-bit
-- **Purpose:** Derive vault master key from identity
-
-**Why HKDF:**
-- Standard KDF construction
-- Combines with SHA3-256 for post-quantum security
-- Deterministic (same input → same output)
-
-#### SHA3-256 (Hashing)
 - **Standard:** FIPS 202
 - **Security:** 256-bit
-- **Purpose:** Content addressing, integrity
-
-**Why SHA3:**
-- NIST-standardized (2015)
-- Collision resistant
-- Different design than SHA2 (Keccak)
+- **Output:** 32 bytes
+- **Use:** Content addressing, key derivation
 
 ---
 
 ## Attack Scenarios
 
-### Scenario 1: Server Reads Storage
+### Scenario 1: Server Compromise
 
-**Attack:** Malicious operator tries to read files.
+**Attack:** Attacker gains full server access.
 
-**What attacker sees:**
-```
-Block 8578287ea915b760... (5,320 bytes)
-  01 02 00 00 00 00 00 00 00 00 47 b3 d0 c0 32 a4
-  82 59 26 5c 0e 9d ca 6b ef 87 a8 6e 6e 71 8c a3
-  ...
-```
+**What attacker gets:**
+- Encrypted message payloads
+- Peer short IDs
+- Routing metadata
 
-**What attacker can do:**
-- Verify ML-DSA signatures ✓
-- Count blocks
-- See approximate sizes
+**What attacker CANNOT get:**
+- Message contents ❌
+- Private keys ❌
+- Full identities ❌
 
-**What attacker CANNOT do:**
-- Decrypt content ❌
-- Read filenames ❌
-- Extract encryption keys ❌
+**Result:** Attack limited to metadata ✅
 
-**Result:** Attack fails ✅
+### Scenario 2: Man-in-the-Middle
 
----
+**Attack:** Attacker intercepts and modifies messages.
 
-### Scenario 2: Network MITM
+**Detection:**
+- ChaCha20-Poly1305 authentication fails
+- Message rejected before decryption
 
-**Attack:** Attacker intercepts upload.
-
-**What attacker sees:**
-```
-HTTP POST /blocks/8578287ea915b760...
-Body: [encrypted block data + ML-DSA signature]
-```
-
-**What attacker can do:**
-- Capture encrypted blocks
-- Verify signatures
-
-**What attacker CANNOT do:**
-- Decrypt blocks ❌
-- Modify blocks (signature will fail) ❌
-
-**Result:** Attack fails ✅
-
----
+**Result:** Attack detected ✅
 
 ### Scenario 3: Quantum Computer (Future)
 
-**Attack:** Attacker with quantum computer tries to break crypto.
+**Attack:** Quantum computer breaks classical crypto.
 
-**Vulnerable algorithms:**
-- RSA ❌ (broken by Shor's algorithm)
-- ECDSA ❌ (broken by Shor's algorithm)
+**Vulnerable (NOT used by Zault):**
+- RSA ❌
+- ECDSA ❌
+- ECDH ❌
 
-**Safe algorithms:**
-- ML-DSA-65 ✅ (quantum-resistant)
-- ML-KEM-768 ✅ (quantum-resistant)
-- ChaCha20 ✅ (256-bit symmetric, Grover's algorithm only halves security to 128-bit)
-- SHA3-256 ✅ (quantum resistance sufficient)
+**Safe (used by Zault):**
+- ML-DSA-65 ✅
+- ML-KEM-768 ✅
+- ChaCha20 ✅ (Grover's halves to 128-bit, still secure)
+- SHA3-256 ✅
 
 **Result:** Zault resists known quantum attacks ✅
 
 ---
 
-### Scenario 4: Compromised Block
-
-**Attack:** Attacker modifies a stored block.
-
-**Detection:**
-1. User runs `zault verify <hash>`
-2. Signature verification fails
-3. Error: `SignatureVerificationFailed`
-
-**Protection:**
-- Signature mismatch detected
-- User warned before decryption
-- No plaintext leaked
-
-**Result:** Attack detected ✅
-
----
-
-## Known Limitations
-
-### 1. Metadata Leakage
-
-**What leaks:**
-- Approximate file sizes (block sizes visible)
-- Number of files in vault
-- Access patterns (timing)
-
-**Not leaked:**
-- Exact file sizes (encrypted in metadata)
-- Filenames (encrypted)
-- MIME types (encrypted)
-
-**Future mitigation:**
-- Pad all blocks to fixed sizes
-- Add dummy blocks
-- Oblivious RAM patterns
-
----
-
-### 2. Single Device Only
-
-**Current limitation:**
-- No multi-device sync
-- No collaboration
-- No sharing (yet)
-
-**Phase 2 will add:**
-- Share tokens (ML-KEM-768)
-- Multi-device sync
-- Server-based storage
-
----
-
-### 3. No Plausible Deniability
-
-**Limitation:**
-- Vault existence is obvious
-- Cannot deny having encrypted data
-- Coercion resistant only if adversary cannot access device
-
-**Not a goal:**
-- Zault is not Veracrypt
-- Focus is on crypto strength, not deniability
-
----
-
 ## Security Audits
 
-**Status:** Not yet audited
+**Current Status:** Not yet externally audited
+
+**Completed:**
+- ✅ NIST KAT test vectors
+- ✅ Fuzz testing
+- ✅ 75+ automated tests
+- ✅ Open source review
 
 **Planned:**
-- Q1 2026: External cryptographic audit
-- Q2 2026: Penetration testing
-- Q3 2026: Formal verification (TLA+)
+- External cryptographic audit
+- Penetration testing
+- Formal verification
 
-**Current state:**
-- Cryptographic primitives are NIST-standardized ✅
-- Implementation uses Zig stdlib (well-tested) ✅
-- 22/22 tests passing ✅
-- Open source (auditable) ✅
+**Recommendation:** Suitable for personal use. Wait for audit before high-value/regulated data.
 
-**Recommendation:** Wait for audits before critical production use.
+---
+
+## Security Best Practices
+
+### For Users
+
+1. **Backup your identity** - Store in multiple secure locations
+2. **Use device encryption** - Full-disk encryption on all devices
+3. **Verify contacts** - Confirm identity through secondary channel
+4. **Keep software updated** - Security fixes in updates
+
+### For Developers
+
+1. **Never log sensitive data** - No plaintext in logs
+2. **Clear memory after use** - Zero sensitive buffers
+3. **Validate all inputs** - Don't trust user data
+4. **Use constant-time operations** - Prevent timing attacks
 
 ---
 
@@ -435,51 +374,17 @@ Body: [encrypted block data + ML-DSA signature]
 
 **DO NOT open a public issue!**
 
-Instead:
-1. Email: security@zault.io (coming soon)
-2. Use GitHub Security Advisories
-3. Encrypted: Use project maintainer's PGP key
+Contact: security@zault.chat
 
-We take security seriously and will respond within 48 hours.
-
----
-
-## Security Best Practices
-
-### For Users
-
-1. **Backup identity.bin** - Store in multiple safe locations
-2. **Use strong device security** - Full-disk encryption, strong password
-3. **Verify signatures** - Especially after network transfer
-4. **Keep Zault updated** - Security fixes distributed via updates
-
-### For Developers
-
-1. **Never trust user input** - Validate everything
-2. **Test crypto operations** - 100% coverage on security code
-3. **Use constant-time operations** - Prevent timing attacks
-4. **Clear sensitive data** - Zero memory after use
-
----
-
-## Compliance
-
-Zault's cryptographic audit trail makes it suitable for:
-
-- **HIPAA** - Healthcare data encryption + audit trail
-- **SOC 2** - Access controls + integrity verification
-- **GDPR** - Right to erasure (delete blocks)
-- **FINRA** - Immutable audit trail
-
-**Note:** Consult your compliance officer before production use.
+We respond within 48 hours and coordinate responsible disclosure.
 
 ---
 
 ## Further Reading
 
 - [Protocol Specification](./protocol-specification.md) - Technical details
-- [Cryptographic Primitives](./cryptography.md) - Algorithm details
-- [Test Vectors](./test-vectors.md) - Interoperability tests
+- [libzault](./libzault.md) - C FFI documentation
+- [WASM](./wasm.md) - Browser integration
 
 ---
 

@@ -1,13 +1,13 @@
 # Zault Roadmap
 
-**Last Updated:** 2025-11-18
-**Current Phase:** Phase 1 Complete ✅ - Ready for v0.1.0 Release
+**Last Updated:** 2025-11-25
+**Current Phase:** Phase 2 Complete ✅ - v0.2.0 Released with P2P Chat
 
 ---
 
 ## Vision
 
-Build the world's most secure, verifiable, and user-friendly post-quantum storage system. Make zero-knowledge encryption accessible to everyone, not just cryptography experts.
+Build the world's most secure, verifiable, and user-friendly post-quantum communication and storage system. Make zero-knowledge encryption accessible to everyone, not just cryptography experts.
 
 ## Guiding Principles
 
@@ -37,392 +37,199 @@ Build the world's most secure, verifiable, and user-friendly post-quantum storag
 
 **Timeline:** Nov 2025 (completed in 1 day!)
 **Goal:** Core protocol working end-to-end with local storage
-**Status:** ✅ COMPLETE - Ready for Release
+**Status:** ✅ COMPLETE
 
-#### Milestone 1.1: Core Library ✅ COMPLETE
+- [x] Identity management (ML-DSA-65)
+- [x] Block operations with content addressing
+- [x] ChaCha20-Poly1305 encryption
+- [x] Local filesystem storage
+- [x] Professional CLI (zig-clap)
+- [x] 22/22 tests passing
+- [x] Multi-platform builds (Linux, macOS, Windows)
 
-**Focus:** Cryptographic primitives and data structures
+---
 
-- [x] **Identity management**
-  - [x] ML-DSA-65 keypair generation
-  - [x] Identity serialization (binary format)
-  - [x] Save/load from file
-  - [x] Deterministic generation from seed
-  - [ ] BIP39 mnemonic backup (deferred to v0.2)
-  - [ ] zpub/zprv encoding (deferred to v0.2)
+### Phase 2: v0.2.0 - Sharing & Chat ✅ COMPLETE
 
-- [x] **Block operations**
-  - [x] Block structure and serialization
-  - [x] Content addressing (SHA3-256)
-  - [x] Block signing and verification (ML-DSA-65)
-  - [x] Block data encryption/decryption
-  - [ ] Block chain validation (basic implementation, full validation in v0.2)
+**Timeline:** Nov 2025 (completed in 2 days!)
+**Goal:** Enable secure sharing and P2P communication
+**Status:** ✅ COMPLETE - Released at [zault.chat](https://zault.chat)
 
-- [x] **Encryption/Decryption**
-  - [x] ChaCha20-Poly1305 wrapper and integration
-  - [x] Key derivation (HKDF-SHA3-256)
-  - [x] Metadata encryption
-  - [x] Content encryption
-  - [x] Two-block system (content + metadata)
+#### Milestone 2.1: Share Tokens ✅ COMPLETE
 
-- [x] **Storage interface**
-  - [x] BlockStore interface
-  - [x] Local filesystem backend
-  - [x] Content-addressed storage
-  - [x] Block indexing (directory walking)
-  - [x] Atomic writes
+- [x] ML-KEM-768 key encapsulation
+- [x] Share token creation/redemption
+- [x] Offline sharing workflow (export/import)
+- [x] Commands: share, receive, import, pubkey
 
-**Success Criteria:** ✅ All Met
-- All core types compile and pass unit tests ✅
-- 22/22 tests passing ✅
-- Operations complete in <10ms ✅
+#### Milestone 2.2: libzault C FFI ✅ COMPLETE
 
-#### Milestone 1.2: CLI Foundation ✅ COMPLETE
+- [x] C-callable API for all crypto operations
+- [x] Message encryption/decryption
+- [x] Digital signatures (sign/verify)
+- [x] Identity serialization
+- [x] Direct ChaCha20 for group messages
+- [x] Shared and static library builds
+- [x] `include/zault.h` header
 
-**Focus:** Professional command-line interface
+#### Milestone 2.3: WASM Build ✅ COMPLETE
 
-- [x] **Identity commands**
-  - [x] `zault init` - Create new vault
-  - [x] `zault --version` - Show version and crypto info
-  - [ ] `zault identity show` - Display public key (deferred)
-  - [ ] `zault identity export` - Export backup (deferred)
-  - [ ] `zault identity import` - Restore from backup (deferred)
+- [x] wasm32-wasi target compilation
+- [x] WASI stubs for browser environment
+- [x] JavaScript wrapper (`wasm/zault.js`)
+- [x] All crypto operations in browser
 
-- [x] **File operations**
-  - [x] `zault add <file>` - Upload file (encrypted)
-  - [x] `zault get <hash>` - Download file (decrypted)
-  - [x] `zault list` - List files with metadata
-  - [ ] `zault rm <hash>` - Delete file (deferred to v0.2)
+#### Milestone 2.4: PWA - P2P Chat ✅ COMPLETE
 
-- [x] **Verification**
-  - [x] `zault verify <hash>` - Verify ML-DSA signature
-  - [ ] `zault log <hash>` - Show version history (deferred to v0.2)
-
-- [x] **Professional CLI (zig-clap)**
-  - [x] Subcommand parsing
-  - [x] Global options (--help, --version, --vault)
-  - [x] Per-command options (get -o, list --hashes)
-  - [x] Per-command help messages
-  - [x] Clean error reporting
-
-**Success Criteria:** ✅ All Met
-- Can upload, download, and verify files ✅
-- CLI has helpful error messages ✅
-- Professional formatting and help ✅
-
-#### Milestone 1.3: Documentation & Release ✅ COMPLETE
-
-**Focus:** Documentation and polish for release
-
-- [x] **Documentation**
-  - [x] README with examples and comparisons
-  - [x] Getting Started guide
-  - [x] CLI reference
-  - [x] Security model
-  - [x] FAQ
-  - [x] API documentation (inline)
-  - [x] Protocol specification
-  - [x] Demo GIF
-  - [x] CHANGELOG
-
-- [x] **Developer experience**
-  - [x] CI/CD pipeline (GitHub Actions)
-  - [x] Automated testing on commit
-  - [x] Multi-platform builds (Linux x86/ARM, macOS x86/ARM, Windows)
-  - [x] GitHub Pages deployment
-  - [x] mdBook with Shiki syntax highlighting
-
-- [x] **Testing**
-  - [x] 22/22 unit tests passing
-  - [x] Integration tests
-  - [x] CI tested locally (act)
-  - [x] End-to-end verification
+- [x] SolidStart + Tailwind + DaisyUI
+- [x] WebSocket signaling server
+- [x] 1:1 encrypted messaging
+- [x] Group chat with key rotation
+- [x] CRDT-based offline sync
+- [x] Split QR code sharing
+- [x] JSON import/export
+- [x] Offline-first with Service Worker
+- [x] 30+ DaisyUI themes
+- [x] 41 Playwright E2E tests
+- [x] Deployed to Fly.io at zault.chat
 
 **Deliverables:** ✅ All Complete
-- `zault v0.1.0` binary (5 platforms)
-- Complete CLI with professional interface
-- Comprehensive documentation
-- Working CI/CD pipeline
+- `zault v0.2.0` CLI with sharing
+- `libzault.so` / `libzault_static.a` C libraries
+- `zault.wasm` WebAssembly module
+- Live PWA at [zault.chat](https://zault.chat)
+- 75+ automated tests (34 Zig + 41 Playwright)
 
 ---
 
-### Phase 2: v0.2.0 - Sharing & Sync
+### Phase 3: v0.3.0 - Server & Persistence
 
-**Timeline:** Jan-Mar 2026 (8-12 weeks)
-**Goal:** Enable secure sharing and multi-device sync
+**Timeline:** Q1 2026
+**Goal:** Persistent storage and multi-device sync
 **Status:** 🔜 Next
 
-#### Milestone 2.1: Share Tokens (Weeks 1-4)
+#### Milestone 3.1: Message Persistence
 
-- [ ] **ML-KEM-768 integration**
-  - [ ] Key encapsulation for recipients
-  - [ ] Share token creation
-  - [ ] Share token encryption
-  - [ ] Expiration handling
+- [ ] Server-side message storage
+- [ ] Message history API
+- [ ] Pagination and search
+- [ ] Attachment support
 
-- [ ] **Share CLI commands**
-  - [ ] `zault share <hash> --to <pubkey>` - Create share
-  - [ ] `zault share <hash> --expires <time>` - Time-limited
-  - [ ] `zault receive <token>` - Redeem share
-  - [ ] `zault shares list` - Show active shares
-  - [ ] `zault shares revoke <token>` - Revoke share
+#### Milestone 3.2: Block Server
 
-- [ ] **Share token format**
-  - [ ] URI scheme (zshare1:...)
-  - [ ] QR code generation
-  - [ ] Server hint embedding
+- [ ] REST API for block storage
+- [ ] S3-compatible backend
+- [ ] Multi-device sync protocol
+- [ ] Conflict resolution
 
-**Success Criteria:**
-- Can share file between two identities
-- Expired shares are rejected
-- Share tokens work offline (no server)
+#### Milestone 3.3: Push Notifications
 
-#### Milestone 2.2: Version History (Weeks 4-7)
-
-- [ ] **DAG operations**
-  - [ ] Version chain traversal (use prev_hash)
-  - [ ] Branch handling
-  - [ ] Merge detection
-  - [ ] Diff computation
-
-- [ ] **Version CLI commands**
-  - [ ] `zault log <hash>` - Show history
-  - [ ] `zault diff <hash> v1 v2` - Compare versions
-  - [ ] `zault checkout <hash> <version>` - Restore version
-  - [ ] `zault blame <hash>` - Show authorship per block
+- [ ] Web Push API integration
+- [ ] Background sync
+- [ ] Notification preferences
 
 **Success Criteria:**
-- Can track 1000+ versions per file
-- Diffs show actual content changes
-- Version verification works
-
-#### Milestone 2.3: Server & Sync (Weeks 7-12)
-
-- [ ] **Server implementation**
-  - [ ] REST API (PUT/GET/DELETE blocks)
-  - [ ] ML-DSA authentication
-  - [ ] Rate limiting
-  - [ ] Quota management
-  - [ ] Health checks
-
-- [ ] **Storage backends**
-  - [ ] S3-compatible storage
-  - [ ] Backblaze B2
-  - [ ] Cloudflare R2
-  - [ ] Generic HTTP backend
-
-- [ ] **Sync protocol**
-  - [ ] Block discovery
-  - [ ] Delta sync (only missing blocks)
-  - [ ] Conflict detection
-  - [ ] Multi-device coordination
-
-- [ ] **Server CLI commands**
-  - [ ] `zault server start` - Run server
-  - [ ] `zault remote add <url>` - Add remote
-  - [ ] `zault push` - Upload to remote
-  - [ ] `zault pull` - Download from remote
-  - [ ] `zault sync` - Bidirectional sync
-
-**Success Criteria:**
-- Server handles 100+ concurrent clients
-- Sync completes in <5s for typical vault
-- Can run on commodity VPS (<$5/mo)
-
-**Deliverables:**
-- `zault v0.2.0` with sharing and sync
-- Self-hostable server
-- S3 backend support
-- Multi-device documentation
+- Messages persist across sessions
+- Multi-device access works
+- <100ms sync latency
 
 ---
 
-### Phase 3: v0.3.0 - Advanced Features
+### Phase 4: v1.0.0 - Production Ready
 
-**Timeline:** Apr-Aug 2026 (16 weeks)
-**Goal:** Production-ready features and hardening
+**Timeline:** Q2-Q3 2026
+**Goal:** Stable, audited, production-ready release
 **Status:** 📋 Planned
 
-#### Milestone 3.1: WASM Client (Weeks 1-5)
+#### Milestone 4.1: Security Audit
 
-- [ ] **Browser compatibility**
-  - [ ] Compile core to WASM
-  - [ ] IndexedDB storage backend
-  - [ ] Web Crypto API integration
-  - [ ] Service Worker for offline
+- [ ] External cryptographic audit
+- [ ] Penetration testing
+- [ ] Bug bounty program
+- [ ] Publish audit report
 
-- [ ] **Web UI**
-  - [ ] File upload/download interface
-  - [ ] Share link generation
-  - [ ] Identity management
-  - [ ] Progress indicators
+#### Milestone 4.2: Mobile Apps
 
-- [ ] **Browser extension**
-  - [ ] Chrome/Firefox extension
-  - [ ] Right-click "Share with Zault"
-  - [ ] Auto-decrypt share links
+- [ ] iOS app (Swift + libzault)
+- [ ] Android app (Kotlin + libzault)
+- [ ] Push notification support
 
-**Success Criteria:**
-- Runs in all modern browsers
-- <2MB WASM bundle size
-- Works offline with Service Worker
+#### Milestone 4.3: Enterprise Features
 
-#### Milestone 3.2: P2P Support (Weeks 5-9)
-
-- [ ] **DHT implementation**
-  - [ ] Kademlia routing
-  - [ ] Block announcement
-  - [ ] Peer discovery
-  - [ ] NAT traversal
-
-- [ ] **Direct transfer**
-  - [ ] QUIC transport
-  - [ ] Stream multiplexing
-  - [ ] Resumable transfers
-
-**Success Criteria:**
-- Can find peers in <5s
-- Direct transfers faster than server
-- Works on NAT-restricted networks
-
-#### Milestone 3.3: Security Audit (Weeks 13-16)
-
-- [ ] **External audit**
-  - [ ] Hire reputable crypto auditor
-  - [ ] Full protocol review
-  - [ ] Implementation review
-  - [ ] Penetration testing
-
-- [ ] **Remediation**
-  - [ ] Fix all critical/high findings
-  - [ ] Document medium/low findings
-  - [ ] Publish audit report
-
-**Success Criteria:**
-- Zero critical vulnerabilities
-- Audit report published
-- All recommendations addressed
-
-**Deliverables:**
-- `zault v0.3.0` release candidate
-- WASM client and browser extension
-- P2P support
-- Security audit report
-
----
-
-### Phase 4: v1.0.0 - Production Release
-
-**Timeline:** Sep 2026 - Dec 2026 (16 weeks)
-**Goal:** Stable, audited, production-ready release
-**Status:** 🔮 Future
-
-#### Milestone 4.1: Mobile Apps (Weeks 1-8)
-
-- [ ] **iOS app**
-  - [ ] Native UI (SwiftUI)
-  - [ ] Zig C API bindings
-  - [ ] Keychain integration
-
-- [ ] **Android app**
-  - [ ] Native UI (Jetpack Compose)
-  - [ ] Zig C API bindings
-  - [ ] Keystore integration
-
-#### Milestone 4.2: Enterprise Features (Weeks 8-12)
-
-- [ ] **Team management**
-  - [ ] Organization identities
-  - [ ] Role-based access control
-  - [ ] Audit log exports
-
-#### Milestone 4.3: Final Hardening (Weeks 12-16)
-
-- [ ] **Stability**
-  - [ ] Beta testing program
-  - [ ] Bug bounty program
-  - [ ] 99%+ test coverage
-
-- [ ] **Release prep**
-  - [ ] Final security review
-  - [ ] Performance benchmarks
-  - [ ] Marketing materials
+- [ ] Organization management
+- [ ] Admin controls
+- [ ] Compliance exports
+- [ ] SSO integration
 
 **Deliverables:**
 - `zault v1.0.0` stable release
-- iOS and Android apps
-- Enterprise features
-- Complete documentation
+- Security audit report
+- Mobile apps
+- Enterprise documentation
 
 ---
 
 ## Current Status
 
-### ✅ Phase 1 Complete (v0.1.0)
+### ✅ What's Working (v0.2.0)
 
-**What's Working:**
-- Post-quantum cryptography (ML-DSA-65, ChaCha20-Poly1305)
-- Zero-knowledge encryption (two-block system)
+**Core:**
+- Post-quantum crypto (ML-DSA-65, ML-KEM-768)
+- Zero-knowledge encryption
 - Content-addressed storage
-- Professional CLI (zig-clap, 5 commands)
-- Comprehensive documentation
-- CI/CD with multi-platform builds
-- 22/22 tests passing
+- 34/34 Zig tests passing
 
-**What's Ready:**
+**Libraries:**
+- libzault C FFI (shared + static)
+- WASM module for browsers
+- JavaScript wrapper
+
+**PWA (zault.chat):**
+- P2P encrypted chat
+- 1:1 and group messaging
+- Offline-first with sync
+- 41/41 Playwright tests
+- 30+ themes
+
+**Platforms:**
 - Linux (x86_64, ARM64)
 - macOS (Intel, Apple Silicon)
 - Windows (x86_64)
+- All modern browsers (WASM)
 
-**Known Limitations:**
-- Single-device only (no sync yet)
-- No sharing (Phase 2.1)
-- No version history (Phase 2.2)
-- Not yet audited (Phase 3.3)
+### 🔜 What's Next (v0.3.0)
 
-### 🔜 Next: Phase 2 (v0.2.0)
-
-**Focus:** Sharing and multi-device sync
-
-**Timeline:** Jan-Mar 2026
-
-**Key Features:**
-- Share tokens with ML-KEM-768
-- Version history
-- Server implementation
+- Message persistence
 - Multi-device sync
+- Push notifications
+- Attachment support
 
 ---
 
 ## Success Metrics
 
-### Technical Metrics
+### Technical Metrics (Current)
 
-**Current (v0.1.0):**
-- ✅ Performance: <10ms for typical operations
-- ✅ Security: NIST-standardized algorithms
-- ✅ Reliability: 22/22 tests passing
-- ✅ Efficiency: <50MB memory usage
-
-**Target (v1.0.0):**
-- Zero critical vulnerabilities (after audit)
-- 99%+ test coverage
-- Support 1TB+ vaults
-- <100ms for all operations
+| Metric | v0.1.0 | v0.2.0 | v1.0.0 Target |
+|--------|--------|--------|---------------|
+| Zig Tests | 22/22 | 34/34 | 50+ |
+| PWA Tests | N/A | 41/41 | 100+ |
+| Test Coverage | ~80% | ~85% | 99%+ |
+| WASM Size | N/A | ~2MB | <1MB |
+| Latency | <10ms | <50ms | <100ms |
 
 ### Adoption Metrics
 
-**v0.1.0 Goals:**
-- Week 1: 100 GitHub stars
-- Month 1: 1,000 downloads
-- Month 3: Community feedback
-- Identify early adopters
+**v0.2.0 Goals:**
+- ✅ Live deployment at zault.chat
+- Week 1: 100 active users
+- Month 1: 1,000 messages sent
+- Gather user feedback
 
 **v1.0.0 Goals:**
-- 100,000 active users
-- 50+ contributors
-- 10+ third-party integrations
-- Enterprise pilot customers
+- 10,000 active users
+- 99.9% uptime
+- Zero critical vulnerabilities
 
 ---
 
@@ -430,46 +237,43 @@ Build the world's most secure, verifiable, and user-friendly post-quantum storag
 
 ### Technical Risks
 
-**Risk:** Security vulnerabilities
-**Mitigation:** External audit (Phase 3.3), open source review, comprehensive testing
-
-**Risk:** Platform compatibility
-**Mitigation:** Multi-platform CI, cross-compilation testing ✅
-
-**Risk:** Performance issues
-**Mitigation:** Benchmarks, profiling, optimization passes
+| Risk | Mitigation |
+|------|------------|
+| Security vulnerabilities | External audit (v1.0), open source, comprehensive tests |
+| Browser compatibility | WASM with polyfills, PWA fallbacks |
+| Scalability | WebSocket clustering, CDN for static assets |
 
 ### Project Risks
 
-**Risk:** Low adoption
-**Mitigation:** Clear value proposition, excellent documentation ✅, active community building
-
-**Risk:** Maintainer burnout
-**Mitigation:** Build contributor community, modular design, good documentation
+| Risk | Mitigation |
+|------|------------|
+| Low adoption | Clear value prop, excellent UX, open source |
+| Maintainer burnout | Modular design, good docs, community building |
 
 ---
 
 ## How to Contribute
 
-See [book/src/contributing.md](book/src/contributing.md) for contribution guidelines.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
-**Priority Areas for v0.2.0:**
-1. ML-KEM-768 share token implementation
-2. Version history (prev_hash chain traversal)
-3. Server implementation (REST API)
-4. Testing and bug reports
+**Priority Areas for v0.3.0:**
+1. Message persistence backend
+2. Multi-device sync protocol
+3. Push notification integration
+4. Performance optimization
+5. Documentation improvements
 
 ---
 
-## Contact & Updates
+## Links
 
+- **Live App:** [zault.chat](https://zault.chat)
 - **GitHub:** https://github.com/mattneel/zault
-- **Discussions:** https://github.com/mattneel/zault/discussions
 - **Documentation:** https://mattneel.github.io/zault
 
 ---
 
-**Last Updated:** 2025-11-18
-**Next Review:** After v0.1.0 release
+**Last Updated:** 2025-11-25
+**Next Review:** After v0.3.0 planning
 
 This roadmap is a living document and will be updated as the project evolves.

@@ -127,7 +127,8 @@ export default function Chat() {
     });
 
     unsubscribeSync = onSync(async (contactId, syncedMessages) => {
-      if (contactId !== contact()?.id) return;
+      // Use params.id directly since contact() might not be set yet
+      if (contactId !== params.id) return;
       const allMsgs = await getMessages(contactId);
       setStoredMessages(allMsgs);
     });

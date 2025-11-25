@@ -112,6 +112,96 @@ test.describe("1:1 Chat", () => {
   });
 });
 
+test.describe("Offline Sync", () => {
+  test("messages sync when navigating back to chat", async ({ browser, baseURL }) => {
+    // Create two users
+    const alice = await setupUser(browser, baseURL!);
+    const bob = await setupUser(browser, baseURL!);
+    
+    // Alice adds Bob and stays in chat
+    await addContactViaLink(alice.page, bob.shareLink, "Bob");
+    
+    // Bob adds Alice
+    await addContactViaLink(bob.page, alice.shareLink, "Alice");
+    
+    // Wait for P2P connections
+    await alice.page.waitForTimeout(2000);
+    await bob.page.waitForTimeout(2000);
+    
+    // Bob navigates AWAY from chat (back to home)
+    await bob.page.locator('.navbar-start button').first().click();
+    await expect(bob.page).toHaveURL("/");
+    await bob.page.waitForTimeout(500);
+    
+    // Alice sends a message while Bob is NOT on the chat page
+    await sendMessage(alice.page, "Message while Bob away");
+    
+    // Wait a moment for the message to be "missed"
+    await alice.page.waitForTimeout(1000);
+    
+    // Bob navigates BACK to chat with Alice
+    const aliceContact = bob.page.locator('a:has-text("Alice")').first();
+    await aliceContact.click();
+    await bob.page.waitForURL(/\/chat\//, { timeout: 5000 });
+    
+    // Bob should see the message after sync (without page refresh)
+    await waitForMessage(bob.page, "Message while Bob away", 10000);
+    
+    await alice.context.close();
+    await bob.context.close();
+  });
+
+  test("messages sync after closing and reopening chat multiple times", async ({ browser, baseURL }) => {
+    // This test simulates the exact user scenario: close chat, receive message, reopen
+    const alice = await setupUser(browser, baseURL!);
+    const bob = await setupUser(browser, baseURL!);
+    
+    // Setup contacts
+    await addContactViaLink(alice.page, bob.shareLink, "Bob");
+    await addContactViaLink(bob.page, alice.shareLink, "Alice");
+    
+    // Wait for P2P connections
+    await alice.page.waitForTimeout(2000);
+    await bob.page.waitForTimeout(2000);
+    
+    // === Round 1: Bob leaves, Alice sends, Bob returns ===
+    
+    // Bob goes home
+    await bob.page.goto(baseURL!);
+    await bob.page.waitForTimeout(500);
+    
+    // Alice sends message 1
+    await sendMessage(alice.page, "First offline message");
+    await alice.page.waitForTimeout(500);
+    
+    // Bob opens chat - should sync
+    await bob.page.locator('a:has-text("Alice")').first().click();
+    await bob.page.waitForURL(/\/chat\//, { timeout: 5000 });
+    await waitForMessage(bob.page, "First offline message", 10000);
+    
+    // === Round 2: Bob leaves again, Alice sends another ===
+    
+    // Bob goes home again
+    await bob.page.goto(baseURL!);
+    await bob.page.waitForTimeout(500);
+    
+    // Alice sends message 2
+    await sendMessage(alice.page, "Second offline message");
+    await alice.page.waitForTimeout(500);
+    
+    // Bob opens chat again - should sync the new message
+    await bob.page.locator('a:has-text("Alice")').first().click();
+    await bob.page.waitForURL(/\/chat\//, { timeout: 5000 });
+    
+    // Should see BOTH messages
+    await waitForMessage(bob.page, "First offline message", 5000);
+    await waitForMessage(bob.page, "Second offline message", 10000);
+    
+    await alice.context.close();
+    await bob.context.close();
+  });
+});
+
 test.describe("Real-time Messaging", () => {
   test("message is received by other user in real-time", async ({ browser, baseURL }) => {
     // Create two users
